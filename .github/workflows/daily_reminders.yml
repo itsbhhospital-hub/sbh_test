@@ -1,0 +1,30 @@
+name: Daily Automated Reminders
+
+on:
+  schedule:
+    # Runs at 09:00 AM IST (03:30 AM UTC)
+    - cron: '30 3 * * *'
+  workflow_dispatch: # Allows manual trigger for testing
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: |
+          npm install firebase-admin axios
+
+      - name: Run Automation Script
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          WHATSAPP_USERNAME: ${{ secrets.WHATSAPP_USERNAME }}
+          WHATSAPP_PASSWORD: ${{ secrets.WHATSAPP_PASSWORD }}
+        run: node scripts/automation_trigger.js
