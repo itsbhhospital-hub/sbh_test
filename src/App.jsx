@@ -16,23 +16,36 @@ import MainDashboard from './pages/MainDashboard';
 import PageLoader from './components/PageLoader';
 import MobileWelcome from './components/MobileWelcome';
 import ReminderEngine from './components/ReminderEngine';
+import AssetsPanel from './pages/AssetsPanel';
+import DirectorDashboard from './pages/DirectorDashboard';
+import AddAsset from './pages/AddAsset';
+import AssetDetails from './pages/AssetDetails';
+import UserManagement from './pages/UserManagement';
+import NewComplaint from './pages/NewComplaint';
+import MyComplaints from './pages/MyComplaints';
+import WorkReport from './pages/WorkReport';
+import SolvedByMe from './pages/SolvedByMe';
+import CaseTransfer from './pages/CaseTransfer';
+import ExtendedCases from './pages/ExtendedCases';
+import ChangePassword from './pages/ChangePassword';
+import AICommandCenter from './pages/AICommandCenter';
+import ServiceTeamPanel from './pages/ServiceTeamPanel';
 
 // Lazy Load Heavy Pages
-const UserManagement = lazy(() => import('./pages/UserManagement'));
-const NewComplaint = lazy(() => import('./pages/NewComplaint'));
-const MyComplaints = lazy(() => import('./pages/MyComplaints'));
-const WorkReport = lazy(() => import('./pages/WorkReport'));
-const SolvedByMe = lazy(() => import('./pages/SolvedByMe'));
-const CaseTransfer = lazy(() => import('./pages/CaseTransfer'));
-const ExtendedCases = lazy(() => import('./pages/ExtendedCases'));
-const ChangePassword = lazy(() => import('./pages/ChangePassword'));
-const AICommandCenter = lazy(() => import('./pages/AICommandCenter'));
-const AssetsPanel = lazy(() => import('./pages/AssetsPanel'));
-const AddAsset = lazy(() => import('./pages/AddAsset'));
-const AssetDetails = lazy(() => import('./pages/AssetDetails'));
+// const UserManagement = lazy(() => import('./pages/UserManagement'));
+// const NewComplaint = lazy(() => import('./pages/NewComplaint'));
+// const MyComplaints = lazy(() => import('./pages/MyComplaints'));
+// const WorkReport = lazy(() => import('./pages/WorkReport'));
+// const SolvedByMe = lazy(() => import('./pages/SolvedByMe'));
+// const CaseTransfer = lazy(() => import('./pages/CaseTransfer'));
+// const ExtendedCases = lazy(() => import('./pages/ExtendedCases'));
+// const ChangePassword = lazy(() => import('./pages/ChangePassword'));
+// const AICommandCenter = lazy(() => import('./pages/AICommandCenter'));
+// const AddAsset = lazy(() => import('./pages/AddAsset'));
+// const AssetDetails = lazy(() => import('./pages/AssetDetails'));
 const PublicAssetView = lazy(() => import('./pages/PublicAssetView'));
-const DirectorDashboard = lazy(() => import('./pages/DirectorDashboard'));
-const ServiceTeamPanel = lazy(() => import('./pages/ServiceTeamPanel'));
+// const DirectorDashboard = lazy(() => import('./pages/DirectorDashboard'));
+// const ServiceTeamPanel = lazy(() => import('./pages/ServiceTeamPanel'));
 
 const ProtectedRoute = ({ children }) => {
   const auth = useAuth();
@@ -70,7 +83,6 @@ const Layout = ({ children }) => {
   const intelLoading = intelContext ? intelContext.loading : true;
   const location = useLocation();
 
-  // Handle hiding the manual loader after navigation + data is ready
   // Handle hiding the manual loader after navigation + data is ready
   React.useEffect(() => {
     // FORCE HIDE: If intelligence is ready, we must dismiss the system loader

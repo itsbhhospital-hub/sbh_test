@@ -21,8 +21,10 @@ const PublicAssetView = () => {
             const data = await assetsService.getPublicAssetDetails(id);
             if (data) {
                 setAsset(data);
-                if (data.installDate) {
-                    setAge(calculateAge(data.installDate));
+                if (data.purchaseDate) {
+                    setAge(calculateAge(data.purchaseDate));
+                } else if (data.currentServiceDate) {
+                    setAge(calculateAge(data.currentServiceDate));
                 }
             } else {
                 setError("Asset details not found.");
@@ -183,16 +185,16 @@ const PublicAssetView = () => {
                             </div>
                             <span className="text-sm font-black text-slate-700">{asset.location || 'N/A'}</span>
                         </div>
-                        {asset.installDate && (
+                        {asset.currentServiceDate && (
                             <div className="flex justify-between p-4 bg-white/50 last:rounded-b-2xl">
                                 <div className="flex items-center gap-2">
                                     <div className="p-1.5 bg-white rounded-md text-slate-400 border border-slate-100 shadow-sm"><Calendar size={14} /></div>
                                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Install Date</span>
                                 </div>
-                                <span className="text-sm font-black text-slate-700">{new Date(asset.installDate).toLocaleDateString() || 'Not Installed Yet'}</span>
+                                <span className="text-sm font-black text-slate-700">{new Date(asset.currentServiceDate).toLocaleDateString() || 'Not Installed Yet'}</span>
                             </div>
                         )}
-                        {!asset.installDate && (
+                        {!asset.currentServiceDate && (
                             <div className="flex justify-between p-4 bg-white/50 last:rounded-b-2xl">
                                 <div className="flex items-center gap-2">
                                     <div className="p-1.5 bg-white rounded-md text-slate-400 border border-slate-100 shadow-sm"><Calendar size={14} /></div>

@@ -12,7 +12,7 @@ const Footer = () => {
                 {/* 📱 MOBILE VIEW (Simple 2-line stack - Even Smaller Height) */}
                 <div className="flex flex-col items-center justify-center md:hidden py-0.5">
                     <a
-                        href="https://sbhgroup.co.in"
+                        href="https://www.sbhhospital.com"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1.5 no-underline"
@@ -51,7 +51,7 @@ const Footer = () => {
 
                     {/* 🏢 CENTER */}
                     <a
-                        href="https://sbhgroup.co.in"
+                        href="https://www.sbhhospital.com"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 py-1 px-4 bg-white/10 hover:bg-white/20 rounded-full border border-white/20 backdrop-blur-lg transition-all transform hover:scale-105 group no-underline shadow-sm"

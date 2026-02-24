@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { firebaseService } from '../services/firebaseService';
 
@@ -7,11 +7,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const ChangePassword = () => {
     const { user, logout } = useAuth();
-    const [form, setForm] = useState({ current: '', new: '', confirm: '' });
-    const [showPass, setShowPass] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState(false);
+    const [form, setForm] = React.useState({ current: '', new: '', confirm: '' });
+    const [showPass, setShowPass] = React.useState(false);
+    const [isLoading, setIsLoading] = React.useState(false);
+    const [error, setError] = React.useState('');
+    const [success, setSuccess] = React.useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

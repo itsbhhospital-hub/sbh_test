@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, UploadCloud, CheckCircle, Save } from 'lucide-react';
 import { assetsService } from '../services/assetsService';
 
 const AddAsset = () => {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
-    const [fileName, setFileName] = useState('');
+    const [loading, setLoading] = React.useState(false);
+    const [fileName, setFileName] = React.useState('');
 
-    const [successId, setSuccessId] = useState(null);
+    const [successId, setSuccessId] = React.useState(null);
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = React.useState({
         machineName: '',
         serialNumber: '',
         purchaseDate: '',

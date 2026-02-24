@@ -1,17 +1,17 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import React from 'react';
 import { useLoading } from './LoadingContext';
 import { sheetsService, getGoogleDriveDirectLink } from '../services/googleSheets';
 import { firebaseService } from '../services/firebaseService';
 import { normalize } from '../utils/dataUtils';
 
-const AuthContext = createContext(null);
+const AuthContext = React.createContext(null);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
     const { showLoader, hideLoader } = useLoading();
 
-    useEffect(() => {
+    React.useEffect(() => {
         showLoader(true, true); // Trigger system-level loader for initial boot
         // Check local storage for persisted session
         const storedUser = localStorage.getItem('sbh_user');
@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     // Active Session Monitor & Auto Logout
-    useEffect(() => {
+    React.useEffect(() => {
         if (!user) return;
         const interval = setInterval(() => {
             const loginTime = localStorage.getItem('sbh_login_time');
@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => {
-    const context = useContext(AuthContext);
+    const context = React.useContext(AuthContext);
     if (context === undefined || context === null) {
         console.error("🚨 [AuthContext] useAuth must be used within an AuthProvider");
         return {

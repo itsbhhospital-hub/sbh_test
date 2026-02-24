@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { assetsService } from '../services/assetsService';
 import {
@@ -8,10 +8,10 @@ import { AlertOctagon, TrendingUp, Activity, ArrowRight } from 'lucide-react';
 
 const DirectorDashboard = () => {
     const navigate = useNavigate();
-    const [assets, setAssets] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [assets, setAssets] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
 
-    useEffect(() => {
+    React.useEffect(() => {
         fetchData();
     }, []);
 
@@ -53,13 +53,13 @@ const DirectorDashboard = () => {
 
     return (
         <div className="max-w-7xl mx-auto space-y-8 pb-12">
-            <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
                 <div className="relative z-10">
                     <h2 className="text-2xl font-black flex items-center gap-2 text-white">
-                        <Activity className="text-indigo-300" />
+                        <Activity className="text-slate-400" />
                         Director's Strategic Overview
                     </h2>
-                    <p className="text-indigo-100 text-sm font-medium mt-1">
+                    <p className="text-slate-300 text-sm font-medium mt-1">
                         High-level asset health, risk assessment, and capital planning insights.
                     </p>
                 </div>
@@ -90,9 +90,9 @@ const DirectorDashboard = () => {
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                     <div>
                         <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Proj. Replacement CapEx</p>
-                        <p className="text-2xl font-black text-indigo-600">₹{totalReplacementCost.toLocaleString()}</p>
+                        <p className="text-2xl font-black text-slate-900">₹{totalReplacementCost.toLocaleString()}</p>
                     </div>
-                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><TrendingUp size={24} /></div>
+                    <div className="p-3 bg-slate-100 text-slate-900 rounded-xl"><TrendingUp size={24} /></div>
                 </div>
             </div>
 

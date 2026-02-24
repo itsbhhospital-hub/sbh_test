@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, Calendar, FileText,
@@ -15,18 +15,18 @@ import FilePreviewModal from '../components/FilePreviewModal';
 const AssetDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [asset, setAsset] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('details'); // 'details' or 'ai'
-    const [submitting, setSubmitting] = useState(false);
-    const [age, setAge] = useState('');
+    const [asset, setAsset] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
+    const [activeTab, setActiveTab] = React.useState('details'); // 'details' or 'ai'
+    const [submitting, setSubmitting] = React.useState(false);
+    const [age, setAge] = React.useState('');
 
     // Modals State
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editForm, setEditForm] = useState({});
+    const [showEditModal, setShowEditModal] = React.useState(false);
+    const [editForm, setEditForm] = React.useState({});
 
-    const [showReplaceModal, setShowReplaceModal] = useState(false);
-    const [replaceForm, setReplaceForm] = useState({
+    const [showReplaceModal, setShowReplaceModal] = React.useState(false);
+    const [replaceForm, setReplaceForm] = React.useState({
         reason: 'Beyond Repair',
         remark: '',
         newMachineName: '',
@@ -37,9 +37,9 @@ const AssetDetails = () => {
         newInvoiceName: ''
     });
 
-    const [showServiceModal, setShowServiceModal] = useState(false);
-    const [selectedRecord, setSelectedRecord] = useState(null); // For history details
-    const [serviceForm, setServiceForm] = useState({
+    const [showServiceModal, setShowServiceModal] = React.useState(false);
+    const [selectedRecord, setSelectedRecord] = React.useState(null); // For history details
+    const [serviceForm, setServiceForm] = React.useState({
         serviceDate: new Date().toISOString().split('T')[0],
         nextServiceDate: '',
         remark: '',
@@ -51,10 +51,10 @@ const AssetDetails = () => {
 
     // Success Popup State
     // File Preview State
-    const [previewFile, setPreviewFile] = useState({ open: false, url: '', name: '' });
+    const [previewFile, setPreviewFile] = React.useState({ open: false, url: '', name: '' });
 
-    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
+    const [showSuccessPopup, setShowSuccessPopup] = React.useState(false);
+    const [successMessage, setSuccessMessage] = React.useState('');
 
     const triggerSuccess = (msg) => {
         setSuccessMessage(msg);
@@ -78,7 +78,7 @@ const AssetDetails = () => {
         }
     };
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (id) fetchDetails();
     }, [id]);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { firebaseService } from '../services/firebaseService';
 
@@ -21,11 +21,11 @@ const WorkReport = () => {
     // Let's rely on contextUsers to get the FULL list of staff (even those with 0 tickets).
 
     // We still need local state for search/selection
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedUser, setSelectedUser] = React.useState(null);
+    const [searchTerm, setSearchTerm] = React.useState('');
 
     // Merge User Data with Intelligence Stats
-    const userMetrics = useMemo(() => {
+    const userMetrics = React.useMemo(() => {
         if (!contextUsers || !Array.isArray(contextUsers)) return [];
 
         return contextUsers.map(u => {
@@ -55,7 +55,7 @@ const WorkReport = () => {
         });
     }, [contextUsers, staffStats]);
 
-    const filteredUsers = useMemo(() => {
+    const filteredUsers = React.useMemo(() => {
         const list = userMetrics.filter(u => {
             const username = (u.Username || '').toLowerCase().trim();
             const search = String(searchTerm).toLowerCase();
@@ -151,17 +151,20 @@ const WorkReport = () => {
                                 <Star size={16} className="text-amber-400" /> User Satisfaction
                             </h4>
                             <div className="space-y-3">
-                                {[5, 4, 3, 2, 1].map(star => {
+                                {[5, 4, 3, 2, 1].map((star, i) => {
                                     const count = selectedUser.stats.breakdown[star];
                                     const total = selectedUser.stats.ratingCount || 1;
                                     const pct = (count / total) * 100;
                                     return (
                                         <div key={star} className="flex items-center gap-3 text-xs font-bold">
                                             <span className="w-8 text-right flex items-center justify-end gap-1 text-slate-500">{star} ★</span>
-                                            <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                <div className="h-full bg-amber-400 rounded-full transition-all duration-300" style={{ width: `${pct}%` }}></div>
+                                            <div className="h-2 w-full bg-emerald-100 rounded-full overflow-hidden shadow-inner flex-1">
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-emerald-500 to-green-500 rounded-full transition-all duration-1000"
+                                                    style={{ width: `${pct}%` }}
+                                                ></div>
                                             </div>
-                                            <span className="w-6 text-slate-400">{count}</span>
+                                            <span className="w-6 text-emerald-700">{count}</span>
                                         </div>
                                     );
                                 })}
@@ -204,24 +207,24 @@ const WorkReport = () => {
             ) : (
                 // --- MAIN DASHBOARD VIEW ---
                 <>
-                    <div className="flex flex-col md:flex-row justify-between items-end gap-6 p-10 bg-[#1f2d2a] rounded-[2.5rem] shadow-none text-white relative overflow-hidden">
+                    <div className="flex flex-col md:flex-row justify-between items-end gap-6 p-10 bg-gradient-to-br from-emerald-600 via-green-600 to-emerald-800 rounded-[2.5rem] shadow-xl shadow-emerald-100/50 text-white relative overflow-hidden">
                         <div className="relative z-10">
-                            <span className="bg-[#2e7d32] text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider mb-4 inline-block shadow-lg shadow-black/20">Resource Metrics</span>
+                            <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider mb-4 inline-block shadow-lg shadow-black/5">Resource Metrics</span>
                             <h1 className="text-3xl md:text-4xl font-bold mb-2 uppercase tracking-tight text-white">Personnel Analytics</h1>
-                            <p className="text-xs text-emerald-400/90 font-bold uppercase tracking-wider">Monitoring hospital service efficiency standards</p>
+                            <p className="text-xs text-emerald-50 font-bold uppercase tracking-wider opacity-90">Monitoring hospital service efficiency standards</p>
                         </div>
                         <div className="relative z-10 w-full md:w-auto">
                             <div className="relative group">
-                                <Search className="absolute left-4 top-4 text-slate-500 group-focus-within:text-[#2e7d32] transition-colors" size={20} />
+                                <Search className="absolute left-4 top-4 text-emerald-200 group-focus-within:text-white transition-colors" size={20} />
                                 <input
-                                    className="pl-12 pr-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder:text-slate-600 font-bold text-xs uppercase tracking-wider focus:bg-white/10 outline-none w-full md:w-72 transition-all"
+                                    className="pl-12 pr-6 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white placeholder:text-emerald-200/60 font-bold text-xs uppercase tracking-wider focus:bg-white/20 outline-none w-full md:w-72 transition-all shadow-inner"
                                     placeholder="Filter by Name/Dept..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
                         </div>
-                        <BarChart3 className="absolute right-0 bottom-0 text-[#2e7d32]/10 w-80 h-80 -mr-10 -mb-20 rotate-12" />
+                        <BarChart3 className="absolute right-0 bottom-0 text-white/5 w-80 h-80 -mr-10 -mb-20 rotate-12" />
                     </div>
 
                     {/* USER LIST CONTAINER WITH SCROLLING */}
@@ -237,24 +240,24 @@ const WorkReport = () => {
                                 <div
                                     key={u.Username || i}
                                     onClick={() => setSelectedUser(u)}
-                                    className="bg-white p-6 rounded-[2rem] border border-[#dcdcdc] hover:border-[#2e7d32] hover:shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer group flex flex-col justify-between relative overflow-hidden"
+                                    className="bg-white p-6 rounded-[2rem] border border-[#dcdcdc] hover:border-slate-900 hover:shadow-xl transition-all cursor-pointer group flex flex-col justify-between relative overflow-hidden"
                                 >
                                     {/* Glass Highlight */}
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-500/10 transition-all"></div>
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-600/5 blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-600/15 transition-all"></div>
 
                                     <div className="flex justify-between items-start mb-6 relative z-10">
-                                        <div className="w-12 h-12 rounded-2xl bg-[#cfead6] flex items-center justify-center text-[#2e7d32] group-hover:bg-[#2e7d32] group-hover:text-white transition-all duration-500 border border-[#2e7d32]/10 rotate-3 group-hover:rotate-0">
+                                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500 border border-emerald-100 rotate-3 group-hover:rotate-0">
                                             <Users size={24} />
                                         </div>
                                         <div className="flex items-center gap-1.5 bg-[#f8faf9] px-3 py-1.5 rounded-full border border-[#dcdcdc] shadow-sm">
-                                            <TrendingUp size={12} className="text-[#2e7d32]" />
-                                            <span className="text-[10px] font-black text-[#1f2d2a] tracking-tight">RANK #{i + 1}</span>
+                                            <TrendingUp size={12} className="text-emerald-600" />
+                                            <span className="text-[10px] font-black text-emerald-950 tracking-tight">RANK #{i + 1}</span>
                                         </div>
                                     </div>
 
                                     <div className="mb-6 relative z-10">
-                                        <h3 className="font-black text-xl text-[#1f2d2a] mb-1 leading-tight uppercase tracking-tighter group-hover:text-[#2e7d32] transition-colors">{u.Username}</h3>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 opacity-80">{u.Department}</p>
+                                        <p className="text-xl font-bold text-emerald-950 truncate uppercase tracking-tight">{u.Username}</p>
+                                        <p className="text-[10px] font-black text-emerald-600/60 uppercase tracking-widest">{u.Department || 'GENERAL SERVICE'}</p>
                                     </div>
 
                                     <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-5 mt-auto relative z-10">
@@ -271,7 +274,7 @@ const WorkReport = () => {
                                         </div>
                                         <div className="text-center group/stat">
                                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest opacity-60">Score</p>
-                                            <p className="font-black text-lg text-[#2e7d32] group-hover/stat:scale-110 transition-transform">{Number(u.stats.efficiency).toFixed(0)}</p>
+                                            <p className="font-black text-lg text-slate-900 group-hover/stat:scale-110 transition-transform">{Number(u.stats.efficiency).toFixed(0)}</p>
                                         </div>
                                     </div>
                                 </div>

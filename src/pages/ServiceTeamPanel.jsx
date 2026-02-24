@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { assetsService } from '../services/assetsService';
 import { AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
 const ServiceTeamPanel = () => {
     const navigate = useNavigate();
-    const [assets, setAssets] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [assets, setAssets] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
 
-    useEffect(() => {
+    React.useEffect(() => {
         fetchData();
     }, []);
 

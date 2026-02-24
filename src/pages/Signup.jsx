@@ -74,7 +74,7 @@ const Signup = () => {
                     transition={{ duration: 0.4 }}
                     className="w-full max-w-[600px] bg-white rounded-3xl shadow-xl overflow-hidden relative z-10 border border-[#dcdcdc]"
                 >
-                    <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+                    <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 to-green-500"></div>
 
                     <div className="p-10 pb-2 flex flex-col items-center">
                         <div className="flex items-center gap-5 mb-8 w-full justify-center">

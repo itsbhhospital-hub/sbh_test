@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import ComplaintList from '../components/ComplaintList';
 import ActiveUsersModal from '../components/ActiveUsersModal';
@@ -37,24 +37,24 @@ const Dashboard = () => {
     // ------------------------------------------------------------------
     // LOCAL UI STATE
     // ------------------------------------------------------------------
-    const [reopenedTickets, setReopenedTickets] = useState([]);
-    const [showReopenModal, setShowReopenModal] = useState(false);
-    const [showActiveStaffModal, setShowActiveStaffModal] = useState(false);
-    const [activeFilter, setActiveFilter] = useState('All');
+    const [reopenedTickets, setReopenedTickets] = React.useState([]);
+    const [showReopenModal, setShowReopenModal] = React.useState(false);
+    const [showActiveStaffModal, setShowActiveStaffModal] = React.useState(false);
+    const [activeFilter, setActiveFilter] = React.useState('All');
 
     // Popup System
-    const [popupOpen, setPopupOpen] = useState(false);
-    const [popupCategory, setPopupCategory] = useState('');
-    const [popupSubFilter, setPopupSubFilter] = useState(null); // 'personal' or null
-    const [popupItems, setPopupItems] = useState([]);
-    const [trackTicket, setTrackTicket] = useState(null);
+    const [popupOpen, setPopupOpen] = React.useState(false);
+    const [popupCategory, setPopupCategory] = React.useState('');
+    const [popupSubFilter, setPopupSubFilter] = React.useState(null); // 'personal' or null
+    const [popupItems, setPopupItems] = React.useState([]);
+    const [trackTicket, setTrackTicket] = React.useState(null);
 
     // Automated Alerts
-    const [boosterNotice, setBoosterNotice] = useState(null);
-    const [delayAlert, setDelayAlert] = useState(null);
+    const [boosterNotice, setBoosterNotice] = React.useState(null);
+    const [delayAlert, setDelayAlert] = React.useState(null);
 
     // 🧠 MODULE 2 & 9: SMART ALERT ENGINE (Client-Side)
-    useEffect(() => {
+    React.useEffect(() => {
         if (loading || !aiRiskReport.length) return;
 
         // 1. Auto Priority Booster (Module 2)
@@ -96,15 +96,15 @@ const Dashboard = () => {
 
     }, [aiRiskReport, loading, user.Department]);
 
-    const isSuperAdmin = ['SUPERADMIN', 'SUPER_ADMIN'].includes(normalize(user?.Role).toUpperCase());
-    const isUserAdmin = isSuperAdmin || normalize(user?.Role) === 'admin';
+    const isSuperAdmin = ['super_admin', 'superadmin'].includes(normalize(user?.Role)) || normalize(user?.Username) === 'amsir' || user?.Username === 'AM Sir';
+    const isUserAdmin = ['admin'].includes(normalize(user?.Role)) || isSuperAdmin;
 
     // ------------------------------------------------------------------
     // AUTOMATED CHECKS (Run when Data Updates)
     // ------------------------------------------------------------------
 
     // 🟢 OPTIMIZED: Calculate Counts with O(1) Visibility Check
-    const dashboardStats = useMemo(() => {
+    const dashboardStats = React.useMemo(() => {
         const initial = { open: 0, pending: 0, solved: 0, transferred: 0, delayed: 0, extended: 0 };
         if (!allTickets.length) return initial;
 
@@ -146,7 +146,7 @@ const Dashboard = () => {
         return initial;
     }, [allTickets, user, isUserAdmin]);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (loading || !allTickets.length) return;
 
         // 1. DELAY POPUP (Daily Logic)
@@ -240,7 +240,7 @@ const Dashboard = () => {
     }, [allTickets, boosters, loading, isUserAdmin, user]);
 
     // OPTIMIZED: Universal Latest-First Sort for Dashboard Components
-    const sortedAllTickets = useMemo(() => {
+    const sortedAllTickets = React.useMemo(() => {
         if (!allTickets) return [];
         return [...allTickets].sort((a, b) => {
             const dateA = new Date(String(a.Timestamp || a.Date).replace(/'/g, ''));
@@ -259,7 +259,7 @@ const Dashboard = () => {
     // UI HANDLERS
     // ------------------------------------------------------------------
     // OPTIMIZED: Memoized filtered items for the popup to ensure instant click response
-    const filteredPopupItems = useMemo(() => {
+    const filteredPopupItems = React.useMemo(() => {
         if (!popupOpen || !popupCategory || popupCategory === 'Active Staff') return [];
 
         const isAdmin = isUserAdmin;

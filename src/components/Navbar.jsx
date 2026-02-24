@@ -219,7 +219,7 @@ const NotificationBell = memo(() => {
             >
                 {/* 🟢 UNREAD INDICATOR (Visual Only) */}
                 {!full && i < 2 && (
-                    <div className="absolute top-0 left-0 w-1 h-full bg-[#2e7d32]"></div>
+                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-600"></div>
                 )}
 
                 <div className={`w-12 h-12 rounded-xl shrink-0 flex items-center justify-center border border-black/5 ${n.iconBg} group-hover/item:scale-110 transition-transform`}>
@@ -307,7 +307,7 @@ const NotificationBell = memo(() => {
         <div className="relative z-50 flex items-center" ref={notifRef}>
             <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="w-10 h-10 bg-white border border-[#dcdcdc] rounded-xl flex items-center justify-center text-[#2e7d32] hover:bg-[#cfead6] transition-all relative group shadow-none"
+                className="w-10 h-10 bg-white border border-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 hover:bg-emerald-50 transition-all relative group shadow-none"
             >
                 <Bell size={20} className="group-active:scale-90 transition-transform" />
                 {notifications.length > 0 && (
@@ -322,7 +322,7 @@ const NotificationBell = memo(() => {
                             <h4 className="font-black text-[#1f2d2a] text-xs uppercase tracking-widest">Protocol Alerts</h4>
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">System Activity Log</p>
                         </div>
-                        <span className="text-[10px] font-black bg-white border border-[#dcdcdc] px-2.5 py-1 rounded-lg text-[#2e7d32]">{notifications.length}</span>
+                        <span className="text-[10px] font-black bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg text-emerald-700">{notifications.length}</span>
                     </div>
 
                     <div className="max-h-[350px] overflow-y-auto custom-scrollbar p-3 space-y-2 bg-white scroll-smooth cursor-default">
@@ -341,7 +341,7 @@ const NotificationBell = memo(() => {
                     <div className="p-3 border-t border-[#f0f0f0] bg-[#f8faf9]">
                         <button
                             onClick={() => { setShowNotifications(false); setShowHistoryModal(true); }}
-                            className="w-full py-2.5 text-[10px] font-black text-[#2e7d32] bg-white border border-[#2e7d32]/10 hover:bg-[#cfead6] rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-widest shadow-none"
+                            className="w-full py-2.5 text-[10px] font-black text-emerald-700 bg-white border border-emerald-100 hover:bg-emerald-50 rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-widest shadow-none"
                         >
                             See More Notifications <ArrowRight size={12} />
                         </button>
@@ -366,9 +366,9 @@ const NotificationBell = memo(() => {
                                 </div>
                                 <button
                                     onClick={() => setShowHistoryModal(false)}
-                                    className="p-2.5 hover:bg-[#cfead6] rounded-xl transition-all border border-transparent hover:border-[#2e7d32]/10 group"
+                                    className="p-2.5 hover:bg-emerald-50 rounded-xl transition-all border border-transparent hover:border-emerald-100 group"
                                 >
-                                    <X size={20} className="text-slate-400 group-hover:text-[#2e7d32]" />
+                                    <X size={20} className="text-emerald-400 group-hover:text-emerald-700" />
                                 </button>
                             </div>
 
@@ -394,8 +394,8 @@ const NotificationBell = memo(() => {
                                         ).map(([date, items]) => (
                                             <div key={date} className="space-y-3">
                                                 <div className="sticky top-0 z-10 py-2 bg-white/95 backdrop-blur-sm flex items-center gap-3">
-                                                    <div className="h-[2px] flex-1 bg-slate-50"></div>
-                                                    <span className="text-[10px] font-black text-[#2e7d32] bg-[#f0f9f1] px-4 py-1.5 rounded-xl uppercase tracking-[0.1em] border border-[#2e7d32]/20 shadow-sm">
+                                                    <div className="h-[2px] flex-1 bg-emerald-50"></div>
+                                                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-50/50 px-4 py-1.5 rounded-xl uppercase tracking-[0.1em] border border-emerald-100 shadow-sm">
                                                         {(() => {
                                                             const today = new Date();
                                                             const todayStr = `${today.getDate().toString().padStart(2, '0')} ${today.toLocaleString('en-IN', { month: 'short' }).toUpperCase()} ${today.getFullYear()}`;
@@ -509,7 +509,7 @@ const Navbar = () => {
                             <div className="md:hidden">
                                 <button
                                     onClick={() => setMobileOpen(true)}
-                                    className="p-2 text-[#2e7d32] hover:bg-[#cfead6] rounded-lg transition-all"
+                                    className="p-2 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all"
                                 >
                                     <Menu size={22} />
                                 </button>
@@ -538,17 +538,17 @@ const Navbar = () => {
                                 {/* User Profile Button */}
                                 <button
                                     onClick={() => setIsOpen(!isOpen)}
-                                    className="flex items-center gap-3 bg-white border border-[#dcdcdc] px-4 py-1.5 rounded-xl shadow-none hover:border-[#2e7d32] transition-all group"
+                                    className="flex items-center gap-3 bg-white border border-[#dcdcdc] px-4 py-1.5 rounded-xl shadow-none hover:border-emerald-600 transition-all group"
                                 >
                                     <div className="flex flex-col items-end hidden sm:flex text-right">
                                         <span className="text-table-data font-black text-[#1f2d2a] leading-tight">
                                             {String(user.Username)}
                                         </span>
-                                        <span className="text-[10px] font-black text-[#2e7d32] tracking-[0.05em] leading-none mt-1 opacity-70">
+                                        <span className="text-[10px] font-black text-emerald-600 tracking-[0.05em] leading-none mt-1 opacity-70">
                                             {user.Role?.toUpperCase() === 'SUPER_ADMIN' ? 'System Master' : user.Role}
                                         </span>
                                     </div>
-                                    <div className="w-10 h-10 bg-[#f8faf9] rounded-xl flex items-center justify-center text-slate-300 overflow-hidden border border-[#dcdcdc] group-hover:border-[#2e7d32] transition-colors">
+                                    <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-400 overflow-hidden border border-[#dcdcdc] group-hover:border-emerald-600 transition-colors">
                                         {user.ProfilePhoto ? (
                                             <img
                                                 src={user.ProfilePhoto}
@@ -567,7 +567,7 @@ const Navbar = () => {
                                             />
                                         ) : null}
                                         {(!user.ProfilePhoto || user.ProfilePhoto === '') && (
-                                            <div className="w-full h-full flex items-center justify-center bg-[#cfead6] font-black text-[#2e7d32] uppercase text-xs">
+                                            <div className="w-full h-full flex items-center justify-center bg-emerald-100 font-black text-emerald-700 uppercase text-xs">
                                                 {user.Username ? user.Username[0].toUpperCase() : <User size={20} strokeWidth={2.5} />}
                                             </div>
                                         )}
@@ -580,10 +580,10 @@ const Navbar = () => {
                                         <div className="p-2 space-y-1">
                                             <button
                                                 onClick={() => { setIsOpen(false); setShowProfilePanel(true); pulseNavigate('#'); }}
-                                                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 text-slate-600 hover:text-[#2e7d32] transition-all group/item"
+                                                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-emerald-50 text-emerald-600 hover:text-emerald-900 transition-all group/item"
                                             >
-                                                <div className="bg-slate-100 group-hover/item:bg-white p-2 rounded-lg transition-all">
-                                                    <Shield size={18} className="text-slate-500 group-hover/item:text-[#2e7d32]" />
+                                                <div className="bg-emerald-50 group-hover/item:bg-white p-2 rounded-lg transition-all">
+                                                    <Shield size={18} className="text-emerald-600 group-hover/item:text-emerald-900" />
                                                 </div>
                                                 <div className="text-left">
                                                     <span className="font-bold text-sm block">My Profile</span>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, memo } from 'react';
+import React, { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -60,22 +60,25 @@ const MainDashboard = () => {
         stressIndex, crisisRisk, loading: intelLoading, flowStats, allTickets
     } = useIntelligence();
 
+    const isSuperAdmin = ['super_admin', 'superadmin'].includes(normalize(user?.Role)) || normalize(user?.Username) === 'amsir' || user?.Username === 'AM Sir';
+    const isUserAdmin = ['admin'].includes(normalize(user?.Role)) || isSuperAdmin;
+
     // Responsive Grid Helper
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-    useEffect(() => {
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+    React.useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
 
-    const healthData = useMemo(() => [
+    const healthData = React.useMemo(() => [
         { name: 'Optimal', value: assetStats.healthy, color: '#10b981' },
         { name: 'At Risk', value: assetStats.risk, color: '#f59e0b' },
         { name: 'Due/Expired', value: assetStats.void + assetStats.serviceDue, color: '#ef4444' },
     ], [assetStats.healthy, assetStats.risk, assetStats.void, assetStats.serviceDue]);
 
-    const tickerTickets = useMemo(() => allTickets.slice(0, isMobile ? 5 : 15), [allTickets, isMobile]);
+    const tickerTickets = React.useMemo(() => allTickets.slice(0, isMobile ? 5 : 15), [allTickets, isMobile]);
 
     return (
         <div className="w-full max-w-full overflow-hidden animate-in fade-in zoom-in-95 duration-500 pb-10">
@@ -131,7 +134,7 @@ const MainDashboard = () => {
                                 </button>
                             )}
 
-                            {(normalize(user?.Username) === 'amsir' || user?.Role?.toUpperCase() === 'SUPER_ADMIN' || user?.Role?.toUpperCase() === 'ADMIN') && (
+                            {isUserAdmin && (
                                 <>
                                     <button
                                         onClick={async () => {

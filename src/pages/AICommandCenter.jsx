@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useIntelligence } from '../context/IntelligenceContext';
 // import { useAnalytics } from '../context/AnalyticsContext'; // Removed unused
 import { Activity, AlertCircle, BarChart3, Clock, TrendingUp, Zap, Building2, User, CheckCircle } from 'lucide-react';
@@ -6,13 +6,13 @@ import { Activity, AlertCircle, BarChart3, Clock, TrendingUp, Zap, Building2, Us
 const AICommandCenter = () => {
     const { stressIndex, loadWarnings = [], crisisRisk, deptTrends, lastAiPulse = new Date(), flowStats, staffStats, allTickets: allComplaints } = useIntelligence();
 
-    const stressColor = useMemo(() => {
+    const stressColor = React.useMemo(() => {
         if (stressIndex > 70) return 'text-rose-500 border-rose-200 bg-rose-50';
         if (stressIndex > 40) return 'text-amber-500 border-amber-200 bg-amber-50';
         return 'text-emerald-500 border-emerald-200 bg-emerald-50';
     }, [stressIndex]);
 
-    const dailyActions = useMemo(() => {
+    const dailyActions = React.useMemo(() => {
         const actions = [];
         if (stressIndex > 50) actions.push("Urgent: High operational pressure detected. Review delayed cases.");
         if (loadWarnings.length > 0) actions.push(`Optimize: ${loadWarnings.length} staff members are overloaded.`);

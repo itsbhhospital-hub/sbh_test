@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { firebaseService } from '../services/firebaseService';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,12 +10,12 @@ import { useIntelligence } from '../context/IntelligenceContext';
 
 const ExtendedCases = () => {
     const { user } = useAuth();
-    const [logs, setLogs] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [logs, setLogs] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [searchTerm, setSearchTerm] = React.useState('');
     const { allTickets } = useIntelligence();
 
-    useEffect(() => {
+    React.useEffect(() => {
         loadLogs();
     }, []);
 

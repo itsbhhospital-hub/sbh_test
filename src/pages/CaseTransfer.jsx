@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { firebaseService } from '../services/firebaseService';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,12 +8,12 @@ import { formatIST, formatDateIST, formatTimeIST } from '../utils/dateUtils';
 
 const CaseTransfer = () => {
     const { user } = useAuth();
-    const [logs, setLogs] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [refreshing, setRefreshing] = useState(false);
+    const [logs, setLogs] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [refreshing, setRefreshing] = React.useState(false);
 
-    useEffect(() => {
+    React.useEffect(() => {
         loadLogs();
     }, []);
 

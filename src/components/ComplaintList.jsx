@@ -195,13 +195,15 @@ const ComplaintCard = memo(({ complaint, onClick, aiDecision }) => (
 
 const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, customReporter = null, customResolver = null, initialFilter = 'All', autoOpenTicket = null, onAutoOpenComplete = () => { } }) => {
     const { user } = useAuth();
-    const isAdmin = user?.Role?.toUpperCase() === 'ADMIN' || user?.Role?.toUpperCase() === 'SUPER_ADMIN';
+    const isSuperAdmin = ['super_admin', 'superadmin'].includes(normalize(user?.Role)) || normalize(user?.Username) === 'amsir' || user?.Username === 'AM Sir';
+    const isAdmin = ['admin'].includes(normalize(user?.Role)) || isSuperAdmin;
     const { getAiCaseDecision, lastSync, staffStats } = useIntelligence();
 
     // 🟢 Derive user performance from global staffStats
     const userPerformance = useMemo(() => {
         if (!staffStats || !user?.Username) return null;
-        return staffStats.find(s => normalize(s.Username) === normalize(user.Username)) || null;
+        const target = normalize(user.Username) === 'amsir' ? 'AM Sir' : user.Username;
+        return staffStats.find(s => normalize(s.Username) === normalize(target)) || null;
     }, [staffStats, user]);
     const [complaints, setComplaints] = useState([]);
     const [loading, setLoading] = useState(true);

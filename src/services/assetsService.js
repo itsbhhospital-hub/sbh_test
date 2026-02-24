@@ -51,6 +51,13 @@ export const assetsService = {
     },
 
     /**
+     * Bulk register assets.
+     */
+    addBulkAssets: async (assetsList) => {
+        return firebaseService.addBulkAssets(assetsList);
+    },
+
+    /**
      * Add a service record.
      */
     async addServiceRecord(data, file, fileName, fileType) {

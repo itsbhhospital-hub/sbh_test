@@ -13,7 +13,8 @@ import {
     setDoc,
     serverTimestamp,
     increment,
-    onSnapshot
+    onSnapshot,
+    writeBatch
 } from "firebase/firestore";
 import {
     signInWithEmailAndPassword,
@@ -749,6 +750,62 @@ export const firebaseService = { // Primary Service Object
             return { status: 'success', assetId: newId };
         } catch (error) {
             console.error("Firestore addAsset Error:", error);
+            throw error;
+        }
+    },
+
+    addBulkAssets: async (assetsList) => {
+        try {
+            const count = assetsList.length;
+
+            // 1. Reserve IDs in a transaction
+            const startingIdNum = await runTransaction(db, async (transaction) => {
+                const counterRef = doc(db, "system", "counters");
+                const counterSnap = await transaction.get(counterRef);
+
+                let current = 0;
+                if (counterSnap.exists() && counterSnap.data().asset) {
+                    current = counterSnap.data().asset;
+                }
+
+                const nextTotal = current + count;
+                transaction.set(counterRef, { asset: nextTotal }, { merge: true });
+                return current + 1; // First ID in this batch
+            });
+
+            // 2. Prepare and write assets in batches (Firestore limit 500 per batch)
+            const BATCH_SIZE = 400;
+            const results = [];
+
+            for (let i = 0; i < assetsList.length; i += BATCH_SIZE) {
+                const batch = writeBatch(db);
+                const chunk = assetsList.slice(i, i + BATCH_SIZE);
+
+                chunk.forEach((assetData, index) => {
+                    const idNum = startingIdNum + i + index;
+                    const assetId = `SBH${idNum}`;
+                    const assetRef = doc(db, "assets", assetId);
+
+                    const finalData = {
+                        ...assetData,
+                        AssetID: assetId,
+                        id: assetId,
+                        status: assetData.status || 'Active',
+                        totalServiceCost: 0,
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp()
+                    };
+
+                    batch.set(assetRef, finalData);
+                    results.push(assetId);
+                });
+
+                await batch.commit();
+            }
+
+            return { status: 'success', assetIds: results };
+        } catch (error) {
+            console.error("Firestore addBulkAssets Error:", error);
             throw error;
         }
     },
