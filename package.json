@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "cap:sync": "cap sync",
-    "cap:build": "cd android && ./gradlew assembleDebug"
+    "cap:build": "cd android && ./gradlew assembleDebug",
+    "fb:login": "firebase login",
+    "fb:deploy": "firebase deploy --only functions"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
@@ -17,10 +19,13 @@
     "@capacitor/core": "^8.1.0",
     "axios": "^1.13.4",
     "clsx": "^2.1.1",
+    "firebase": "^12.9.0",
     "framer-motion": "^12.29.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.1.0",
     "lucide-react": "^0.563.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-easy-crop": "^5.5.6",
     "react-qr-code": "^2.0.18",
     "react-router-dom": "^7.13.0",
@@ -34,6 +39,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.24",
+    "firebase-tools": "^15.7.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "vite": "^7.3.1"

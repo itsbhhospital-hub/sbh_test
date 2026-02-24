@@ -358,6 +358,8 @@ const Dashboard = () => {
     const myRank = myStats.rank ? `#${myStats.rank}` : '-';
 
 
+    if (loading) return <DashboardSkeleton />;
+
     return (
         <div className="w-full max-w-full overflow-x-hidden md:px-0 space-y-6 md:space-y-8 pb-10">
             <ActiveUsersModal
@@ -528,7 +530,7 @@ const Dashboard = () => {
                     <h1 className="text-3xl font-bold text-[#1f2d2a] tracking-tight flex items-center gap-4 uppercase">
                         Ticket <span className="text-[#2e7d32]">Registry</span>
                         <span className="px-3 py-1 rounded-xl bg-[#cfead6] border border-[#2e7d32]/10 text-[10px] font-bold text-[#2e7d32] tracking-wider whitespace-nowrap uppercase">
-                            Live Sync
+                            Live Sync v2.1
                         </span>
                     </h1>
                     <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest opacity-60">Medical Service Operational Monitoring</p>

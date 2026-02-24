@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
 import { useAuth } from '../context/AuthContext';
+
 import { motion } from 'framer-motion';
 import { Clock, Search, ArrowRight, User, Calendar, History, TrendingUp, AlertCircle } from 'lucide-react';
 import { formatIST, formatDateIST, parseCustomDate } from '../utils/dateUtils';
@@ -20,7 +21,8 @@ const ExtendedCases = () => {
 
     const loadLogs = async () => {
         try {
-            const data = await sheetsService.getExtensionLogs(true);
+            const data = await firebaseService.getExtensionLogs(true);
+
             const safeData = Array.isArray(data) ? data : [];
             // Sort by most recent extension time using robust parser
             const sorted = safeData.sort((a, b) => {

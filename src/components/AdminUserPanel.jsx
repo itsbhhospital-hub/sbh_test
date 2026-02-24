@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
 import { Check, X, Shield, User as UserIcon, Key, AlertTriangle } from 'lucide-react';
 
 const AdminUserPanel = () => {
@@ -13,7 +13,7 @@ const AdminUserPanel = () => {
 
     const loadUsers = async () => {
         try {
-            const data = await sheetsService.getUsers();
+            const data = await firebaseService.getUsers();
             setUsers(data);
         } catch (err) {
             console.error(err);
@@ -24,6 +24,13 @@ const AdminUserPanel = () => {
 
     const updateUserRole = async (targetUser, newRole, newStatus) => {
         const username = targetUser.Username;
+        const previousUsers = [...users];
+
+        // 🟢 OPTIMISTIC UPDATE
+        setUsers(users.map(u =>
+            u.Username === username ? { ...u, Role: newRole, Status: newStatus } : u
+        ));
+
         try {
             const fullPayload = {
                 OldUsername: username,
@@ -35,13 +42,11 @@ const AdminUserPanel = () => {
                 Status: newStatus
             };
 
-            await sheetsService.updateUser(fullPayload);
-
-            setUsers(users.map(u =>
-                u.Username === username ? { ...u, Role: newRole, Status: newStatus } : u
-            ));
+            await firebaseService.updateUser(fullPayload);
         } catch (error) {
             console.error("Failed to update user", error);
+            // 🔴 ROLLBACK
+            setUsers(previousUsers);
             alert("Failed to update user on server.");
         }
     };
@@ -61,7 +66,7 @@ const AdminUserPanel = () => {
                 OldUsername: username // Ensure backend finds the right user
             };
 
-            await sheetsService.updateUser(fullPayload);
+            await firebaseService.updateUser(fullPayload);
             alert(`Password for ${username} reset successfully.`);
         } catch (error) {
             console.error(error);

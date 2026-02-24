@@ -218,37 +218,41 @@ const Sidebar = () => {
                     />
 
                     {/* CMS CATEGORY */}
-                    <CollapsibleCategory
-                        icon={ClipboardList}
-                        label="CMS Services"
-                        collapsed={isActualCollapsed}
-                        isOpen={openMenus.cms}
-                        onToggle={() => toggleMenu('cms')}
-                    >
-                        <NavItem to="/cms-panel" icon={LayoutDashboard} label="CMS Overview" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                        <NavItem to="/new-complaint" icon={Plus} label="New Ticket" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                        <NavItem to="/my-complaints" icon={ClipboardList} label="Complaint Desk" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                        <NavItem to="/case-transfer" icon={Share2} label="Case Transfer" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                        <NavItem to="/extended-cases" icon={Clock} label="Extended Cases" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                        <NavItem to="/solved-by-me" icon={CheckCircle} label="Solved By Me" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                        {isSuperAdmin && (
-                            <NavItem to="/ai-command-center" icon={Zap} label="AI Center" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                        )}
-                    </CollapsibleCategory>
+                    {(user?.Permissions?.cmsAccess !== false) && (
+                        <CollapsibleCategory
+                            icon={ClipboardList}
+                            label="CMS Services"
+                            collapsed={isActualCollapsed}
+                            isOpen={openMenus.cms}
+                            onToggle={() => toggleMenu('cms')}
+                        >
+                            <NavItem to="/cms-panel" icon={LayoutDashboard} label="CMS Overview" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                            <NavItem to="/new-complaint" icon={Plus} label="New Ticket" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                            <NavItem to="/my-complaints" icon={ClipboardList} label="Complaint Desk" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                            <NavItem to="/case-transfer" icon={Share2} label="Case Transfer" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                            <NavItem to="/extended-cases" icon={Clock} label="Extended Cases" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                            <NavItem to="/solved-by-me" icon={CheckCircle} label="Solved By Me" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                            {isSuperAdmin && (
+                                <NavItem to="/ai-command-center" icon={Zap} label="AI Center" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                            )}
+                        </CollapsibleCategory>
+                    )}
 
                     {/* ASSETS CATEGORY */}
-                    <CollapsibleCategory
-                        icon={Building2}
-                        label="Asset Management"
-                        collapsed={isActualCollapsed}
-                        isOpen={openMenus.assets}
-                        onToggle={() => toggleMenu('assets')}
-                    >
-                        <NavItem to="/director" icon={BarChart3} label="Asset Intel" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                        <NavItem to="/assets" icon={Building2} label="Asset Registry" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                        <NavItem to="/assets/add" icon={Plus} label="New Asset" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                        <NavItem to="/service-team" icon={Wrench} label="Services" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
-                    </CollapsibleCategory>
+                    {(user?.Permissions?.assetsAccess !== false) && (
+                        <CollapsibleCategory
+                            icon={Building2}
+                            label="Asset Management"
+                            collapsed={isActualCollapsed}
+                            isOpen={openMenus.assets}
+                            onToggle={() => toggleMenu('assets')}
+                        >
+                            <NavItem to="/director" icon={BarChart3} label="Asset Intel" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                            <NavItem to="/assets" icon={Building2} label="Asset Registry" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                            <NavItem to="/assets/add" icon={Plus} label="New Asset" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                            <NavItem to="/service-team" icon={Wrench} label="Services" isSubItem collapsed={isActualCollapsed} mobileOpen={mobileOpen} isHovered={isHovered} setMobileOpen={setMobileOpen} />
+                        </CollapsibleCategory>
+                    )}
 
                     {/* MANAGEMENT CATEGORY */}
                     {isAdmin && (

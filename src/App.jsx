@@ -15,6 +15,7 @@ import Dashboard from './pages/Dashboard';
 import MainDashboard from './pages/MainDashboard';
 import PageLoader from './components/PageLoader';
 import MobileWelcome from './components/MobileWelcome';
+import ReminderEngine from './components/ReminderEngine';
 
 // Lazy Load Heavy Pages
 const UserManagement = lazy(() => import('./pages/UserManagement'));
@@ -44,10 +45,29 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const PermissionRoute = ({ children, requiredPermission }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <GlobalLoader />;
+  if (!user) return <Navigate to="/login" />;
+
+  // Super Admin bypass
+  const isSuperAdmin = ['SUPERADMIN', 'SUPER_ADMIN'].includes(String(user?.Role || '').toUpperCase()) || user?.Username === 'AM Sir';
+  if (isSuperAdmin) return children;
+
+  // Check specific permission
+  if (requiredPermission && user.Permissions?.[requiredPermission] === false) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
 // Layout component with Sidebar
 const Layout = ({ children }) => {
   const { isLoading, isSystemLoading, hideLoader } = useLoading();
-  const { loading: intelLoading } = useIntelligence();
+  const intelContext = useIntelligence();
+  const intelLoading = intelContext ? intelContext.loading : true;
   const location = useLocation();
 
   // Handle hiding the manual loader after navigation + data is ready
@@ -94,6 +114,7 @@ function App() {
         <AuthProvider>
           <IntelligenceProvider>
             <MobileWelcome />
+            <ReminderEngine />
             <GlobalLoader />
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -107,30 +128,38 @@ function App() {
               } />
               <Route path="/cms-panel" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
+                  <PermissionRoute requiredPermission="cmsAccess">
+                    <Layout>
+                      <Dashboard />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/new-complaint" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <NewComplaint />
-                  </Layout>
+                  <PermissionRoute requiredPermission="cmsAccess">
+                    <Layout>
+                      <NewComplaint />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/my-complaints" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <MyComplaints />
-                  </Layout>
+                  <PermissionRoute requiredPermission="cmsAccess">
+                    <Layout>
+                      <MyComplaints />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/solved-by-me" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <SolvedByMe />
-                  </Layout>
+                  <PermissionRoute requiredPermission="cmsAccess">
+                    <Layout>
+                      <SolvedByMe />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/work-report" element={
@@ -149,16 +178,20 @@ function App() {
               } />
               <Route path="/case-transfer" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <CaseTransfer />
-                  </Layout>
+                  <PermissionRoute requiredPermission="cmsAccess">
+                    <Layout>
+                      <CaseTransfer />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/extended-cases" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <ExtendedCases />
-                  </Layout>
+                  <PermissionRoute requiredPermission="cmsAccess">
+                    <Layout>
+                      <ExtendedCases />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/change-password" element={
@@ -170,44 +203,56 @@ function App() {
               } />
               <Route path="/ai-command-center" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <AICommandCenter />
-                  </Layout>
+                  <PermissionRoute requiredPermission="cmsAccess">
+                    <Layout>
+                      <AICommandCenter />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/assets" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <AssetsPanel />
-                  </Layout>
+                  <PermissionRoute requiredPermission="assetsAccess">
+                    <Layout>
+                      <AssetsPanel />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/assets/add" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <AddAsset />
-                  </Layout>
+                  <PermissionRoute requiredPermission="assetsAccess">
+                    <Layout>
+                      <AddAsset />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/assets/:id" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <AssetDetails />
-                  </Layout>
+                  <PermissionRoute requiredPermission="assetsAccess">
+                    <Layout>
+                      <AssetDetails />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/director" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <DirectorDashboard />
-                  </Layout>
+                  <PermissionRoute requiredPermission="assetsAccess">
+                    <Layout>
+                      <DirectorDashboard />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/service-team" element={
                 <ProtectedRoute>
-                  <Layout>
-                    <ServiceTeamPanel />
-                  </Layout>
+                  <PermissionRoute requiredPermission="assetsAccess">
+                    <Layout>
+                      <ServiceTeamPanel />
+                    </Layout>
+                  </PermissionRoute>
                 </ProtectedRoute>
               } />
               <Route path="/asset-view/:id" element={<PublicAssetView />} />

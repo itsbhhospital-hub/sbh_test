@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Lock, User, Building, Phone, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Footer from '../components/Footer';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
 import { normalize } from '../utils/dataUtils';
 import logo from '../assets/logo.jpg';
 
@@ -25,7 +25,8 @@ const Signup = () => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            const users = await sheetsService.getUsers();
+            const users = await firebaseService.getUsers();
+
 
             const newUsername = normalize(formData.username);
             const newMobile = String(formData.mobile).trim();

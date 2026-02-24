@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
 import { Send, CheckCircle, Building2, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+
 import { motion } from 'framer-motion';
 import { DEPARTMENTS, UNITS } from '../constants/appData';
 
@@ -58,13 +59,16 @@ const ComplaintForm = ({ onComplaintCreated }) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const result = await sheetsService.createComplaint({
+            console.log("📨 [ComplaintForm] Submitting...");
+            const result = await firebaseService.createComplaint({
                 department,
                 description,
                 unit,
                 reportedBy: user.Username
             });
-            const ticketId = result.data?.id || result.id || 'Pending';
+            console.log("📥 [ComplaintForm] Result:", result);
+            const ticketId = result.id || 'Pending';
+
             setSuccessId(ticketId);
             setShowSuccess(true);
             setDepartment('');

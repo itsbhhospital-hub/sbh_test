@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
 import { useAuth } from '../context/AuthContext';
+
 import { motion } from 'framer-motion';
 import { History, Search, ArrowRight, User, Building2, Calendar, Clock, RefreshCw } from 'lucide-react';
 import { formatIST, formatDateIST, formatTimeIST } from '../utils/dateUtils';
@@ -20,7 +21,8 @@ const CaseTransfer = () => {
         if (force) setRefreshing(true);
         else setLoading(true);
         try {
-            const data = await sheetsService.getTransferLogs(force);
+            const data = await firebaseService.getTransferLogs(force);
+
 
             // Filtering: SUPER_ADMIN and ADMIN see all, others see their own or their dept
             const role = (user.Role || '').toUpperCase();

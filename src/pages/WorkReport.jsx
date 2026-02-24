@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
+
 import { useAuth } from '../context/AuthContext';
 import { useIntelligence } from '../context/IntelligenceContext';
 import ComplaintList from '../components/ComplaintList';
@@ -231,40 +232,46 @@ const WorkReport = () => {
                             </h2>
                         </div>
 
-                        <div className="max-h-[60vh] overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pr-2">
                             {filteredUsers.map((u, i) => (
                                 <div
                                     key={u.Username || i}
                                     onClick={() => setSelectedUser(u)}
-                                    className="bg-white p-5 rounded-xl border border-[#dcdcdc] hover:border-[#2e7d32] hover:bg-[#f8faf9] transition-all cursor-pointer group flex flex-col justify-between"
+                                    className="bg-white p-6 rounded-[2rem] border border-[#dcdcdc] hover:border-[#2e7d32] hover:shadow-xl hover:shadow-emerald-500/5 transition-all cursor-pointer group flex flex-col justify-between relative overflow-hidden"
                                 >
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="w-10 h-10 rounded-lg bg-[#cfead6] flex items-center justify-center text-[#2e7d32] group-hover:bg-[#2e7d32] group-hover:text-white transition-all border border-[#2e7d32]/10">
-                                            <Users size={20} />
+                                    {/* Glass Highlight */}
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-500/10 transition-all"></div>
+
+                                    <div className="flex justify-between items-start mb-6 relative z-10">
+                                        <div className="w-12 h-12 rounded-2xl bg-[#cfead6] flex items-center justify-center text-[#2e7d32] group-hover:bg-[#2e7d32] group-hover:text-white transition-all duration-500 border border-[#2e7d32]/10 rotate-3 group-hover:rotate-0">
+                                            <Users size={24} />
                                         </div>
-                                        <div className="flex items-center gap-1 bg-[#f8faf9] px-2 py-1 rounded-lg border border-[#dcdcdc]">
+                                        <div className="flex items-center gap-1.5 bg-[#f8faf9] px-3 py-1.5 rounded-full border border-[#dcdcdc] shadow-sm">
                                             <TrendingUp size={12} className="text-[#2e7d32]" />
-                                            <span className="text-[10px] font-bold text-[#1f2d2a]">RANK #{i + 1}</span>
+                                            <span className="text-[10px] font-black text-[#1f2d2a] tracking-tight">RANK #{i + 1}</span>
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <h3 className="font-bold text-base text-[#1f2d2a] mb-0.5 tracking-tight uppercase truncate">{u.Username}</h3>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-4 truncate">{u.Department}</p>
+                                    <div className="mb-6 relative z-10">
+                                        <h3 className="font-black text-xl text-[#1f2d2a] mb-1 leading-tight uppercase tracking-tighter group-hover:text-[#2e7d32] transition-colors">{u.Username}</h3>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 opacity-80">{u.Department}</p>
                                     </div>
 
-                                    <div className="grid grid-cols-3 gap-2 border-t border-slate-100 pt-4 mt-2">
-                                        <div className="text-center">
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Solved</p>
-                                            <p className="font-bold text-sm text-[#1f2d2a]">{u.stats.resolved}</p>
+                                    <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-5 mt-auto relative z-10">
+                                        <div className="text-center group/stat">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest opacity-60">Solved</p>
+                                            <p className="font-black text-lg text-[#1f2d2a] group-hover/stat:scale-110 transition-transform">{u.stats.resolved}</p>
                                         </div>
-                                        <div className="text-center border-x border-slate-100 px-1">
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Rating</p>
-                                            <p className="font-bold text-sm text-amber-600">{u.stats.avgRating}</p>
+                                        <div className="text-center border-x border-slate-100 px-2 group/stat">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest opacity-60">Rating</p>
+                                            <div className="flex items-center justify-center gap-1">
+                                                <p className="font-black text-lg text-amber-500">{u.stats.avgRating}</p>
+                                                <Star size={12} className="fill-amber-500 text-amber-500" />
+                                            </div>
                                         </div>
-                                        <div className="text-center">
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Score</p>
-                                            <p className="font-bold text-sm text-[#2e7d32]">{Number(u.stats.efficiency).toFixed(0)}</p>
+                                        <div className="text-center group/stat">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest opacity-60">Score</p>
+                                            <p className="font-black text-lg text-[#2e7d32] group-hover/stat:scale-110 transition-transform">{Number(u.stats.efficiency).toFixed(0)}</p>
                                         </div>
                                     </div>
                                 </div>

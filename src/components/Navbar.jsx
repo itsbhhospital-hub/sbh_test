@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo, memo } from 'react';
 import { User, LogOut, Key, Shield, Building2, Phone, X, Check, Eye, EyeOff, Menu, Bell, Edit2, CheckCircle, ArrowRight, Clock, AlertTriangle, Calendar, Star, TrendingUp, Wrench } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useIntelligence } from '../context/IntelligenceContext';
 import { useLayout } from '../context/LayoutContext';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
 import { formatIST } from '../utils/dateUtils';
 import UserProfilePanel from '../components/UserProfilePanel';
 
@@ -81,178 +82,129 @@ const NotificationBell = memo(() => {
         }
     }, [notifications.length, showHistoryModal]);
 
-    // Notifications Polling
+    const { allTickets: complaintsData, allTransfers: transferData, allBoosters: boosterData } = useIntelligence();
+
+    // Notifications Engine
     useEffect(() => {
-        if (!user) return;
-        const fetchNotifs = async () => {
-            try {
-                const [complaintsData, transferData] = await Promise.all([
-                    sheetsService.getComplaints(false, true),
-                    sheetsService.getTransferLogs(false, true)
-                ]);
+        if (!user || user.Permissions?.cmsAccess === false || !complaintsData) {
+            setNotifications([]);
+            return;
+        }
 
-                const role = String(user.Role || '').toUpperCase().trim();
-                const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-                const username = String(user.Username || '').toLowerCase().trim();
-                const userDept = String(user.Department || '').toLowerCase().trim();
+        try {
+            const role = String(user.Role || '').toUpperCase().trim();
+            const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+            const username = String(user.Username || '').toLowerCase().trim();
+            const userDept = String(user.Department || '').toLowerCase().trim();
 
-                let allEvents = [];
+            let allEvents = [];
 
-                complaintsData.forEach(t => {
-                    const rowDept = normalize(t.Department);
-                    const rowReporter = normalize(t.ReportedBy);
-                    const rowResolver = normalize(t.ResolvedBy || t.AssignedTo);
-                    const userDept = normalize(user.Department);
-                    const userName = normalize(user.Username);
+            complaintsData.forEach(t => {
+                const rowDept = normalize(t.Department);
+                const rowReporter = normalize(t.ReportedBy);
+                const rowResolver = normalize(t.ResolvedBy || t.AssignedTo);
 
-                    // Visibility Check for Notifications (STRICT)
-                    if (!isAdmin) {
-                        const isMyDept = rowDept === userDept;
-                        const isMyReport = rowReporter === userName;
-                        const isMyTask = rowResolver === userName;
-                        if (!isMyDept && !isMyReport && !isMyTask) return;
-                    }
+                if (!isAdmin) {
+                    const isMyDept = rowDept === userDept;
+                    const isMyReport = rowReporter === username;
+                    const isMyTask = rowResolver === username;
+                    if (!isMyDept && !isMyReport && !isMyTask) return;
+                }
 
-                    // Complaint Registered
+                // Complaint Registered
+                allEvents.push({
+                    id: t.ID,
+                    type: 'REGISTERED',
+                    title: 'New Complaint Registered',
+                    timeText: formatIST(t.Date),
+                    rawTime: t.Date,
+                    details: {
+                        ticket: t.ID,
+                        department: t.Department,
+                        unit: t.Unit,
+                        registeredBy: t.ReportedBy
+                    },
+                    icon: Star,
+                    color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+                    iconBg: 'bg-emerald-50 text-emerald-600',
+                    viewParams: `?ticketId=${t.ID}`
+                });
+
+                // Complaint Closed/Resolved
+                if (['solved', 'closed', 'resolved', 'force close'].includes(String(t.Status).toLowerCase())) {
                     allEvents.push({
                         id: t.ID,
-                        type: 'REGISTERED',
-                        title: 'New Complaint Registered',
-                        timeText: formatIST(t.Date),
-                        rawTime: t.Date, // For sorting
+                        type: 'RESOLVED',
+                        title: 'Complaint Successfully Resolved',
+                        timeText: formatIST(t.ResolvedDate || t.LastUpdated || t.Date),
+                        rawTime: t.ResolvedDate || t.LastUpdated || t.Date,
                         details: {
                             ticket: t.ID,
                             department: t.Department,
-                            unit: t.Unit,
-                            registeredBy: t.ReportedBy
+                            resolvedBy: t.ResolvedBy || 'AM Sir'
                         },
-                        icon: Star,
-                        color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-                        iconBg: 'bg-emerald-50 text-emerald-600',
+                        icon: CheckCircle,
+                        color: 'text-purple-600 bg-purple-50 border-purple-100',
+                        iconBg: 'bg-purple-50 text-purple-600',
                         viewParams: `?ticketId=${t.ID}`
                     });
+                }
+            });
 
-                    // Complaint Closed/Resolved
-                    if (['solved', 'closed', 'resolved', 'force close'].includes(String(t.Status).toLowerCase())) {
-                        allEvents.push({
-                            id: t.ID,
-                            type: 'RESOLVED',
-                            title: 'Complaint Successfully Resolved',
-                            timeText: formatIST(t.ResolvedDate || t.LastUpdated || t.Date),
-                            rawTime: t.ResolvedDate || t.LastUpdated || t.Date,
-                            details: {
-                                ticket: t.ID,
-                                department: t.Department,
-                                resolvedBy: t.ResolvedBy || 'AM Sir'
-                            },
-                            icon: CheckCircle,
-                            color: 'text-purple-600 bg-purple-50 border-purple-100',
-                            iconBg: 'bg-purple-50 text-purple-600',
-                            viewParams: `?ticketId=${t.ID}`
-                        });
-                    }
+            // Booster Notifications
+            if (boosterData && boosterData.length > 0) {
+                boosterData.forEach(b => {
+                    const bDept = normalize(b.Department);
+                    if (!isAdmin && bDept !== userDept) return;
 
-                    // Complaint Delayed (NEW)
-                    if (String(t.Status).toLowerCase() === 'delayed') {
-                        // Delay Routing Rule: Sent only to Target Dept or Admin (NOT Reporter)
-                        const isReporter = normalize(t.ReportedBy) === normalize(user.Username) || normalize(t.Username) === normalize(user.Username);
-                        const isMyDept = rowDept === userDept;
-                        if (isAdmin || (isMyDept && !isReporter)) {
-                            allEvents.push({
-                                id: t.ID,
-                                type: 'DELAYED',
-                                title: 'Ticket Milestone Delayed',
-                                timeText: formatIST(new Date()),
-                                rawTime: new Date().toISOString(),
-                                details: {
-                                    ticket: t.ID,
-                                    department: t.Department,
-                                    status: 'OVERDUE'
-                                },
-                                icon: AlertTriangle,
-                                color: 'text-rose-600 bg-rose-50 border-rose-100',
-                                iconBg: 'bg-rose-50 text-rose-600',
-                                viewParams: `?ticketId=${t.ID}`
-                            });
-                        }
-                    }
+                    allEvents.push({
+                        id: b.TicketID,
+                        type: 'BOOSTER',
+                        title: '🚨 PRIORITY ACTION NOTICE',
+                        timeText: formatIST(b.Timestamp),
+                        rawTime: b.Timestamp,
+                        details: {
+                            ticket: b.TicketID,
+                            department: b.Department,
+                            admin: b.Admin,
+                            reason: b.Reason
+                        },
+                        icon: AlertTriangle,
+                        color: 'text-amber-600 bg-amber-50 border-amber-100',
+                        iconBg: 'bg-amber-50 text-amber-600',
+                        viewParams: `?ticketId=${b.TicketID}`
+                    });
                 });
-
-                // Booster Action Notifications (NEW)
-                const boosterData = await sheetsService.getBoosters(true, true).catch(() => []);
-                if (boosterData && boosterData.length > 0) {
-                    boosterData.forEach(b => {
-                        const bDept = normalize(b.Department);
-                        const userDept = normalize(user.Department);
-
-                        // Rule: Admin sees ALL, User sees ONLY their dept
-                        if (!isAdmin && bDept !== userDept) return;
-
-                        // NEW: Only show if case is still OPEN/PENDING
-                        const ticket = complaintsData.find(t => String(t.ID) === String(b.TicketID));
-                        const isTicketOpen = ticket ? ['open', 'pending', 'transferred', 're-open', 'delayed'].includes(String(ticket.Status).toLowerCase()) : true;
-                        if (!isTicketOpen) return;
-
-                        allEvents.push({
-                            id: b.TicketID,
-                            type: 'BOOSTER',
-                            title: '🚨 PRIORITY ACTION NOTICE',
-                            timeText: formatIST(b.Timestamp),
-                            rawTime: b.Timestamp,
-                            details: {
-                                ticket: b.TicketID,
-                                department: b.Department,
-                                admin: b.Admin,
-                                reason: b.Reason
-                            },
-                            icon: AlertTriangle,
-                            color: 'text-amber-600 bg-amber-50 border-amber-100',
-                            iconBg: 'bg-amber-50 text-amber-600',
-                            viewParams: `?ticketId=${b.TicketID}`
-                        });
-                    });
-                }
-
-                // Complaint Transferred (Admins only)
-                if (isAdmin && transferData) {
-                    transferData.forEach(l => {
-                        allEvents.push({
-                            id: l.ID,
-                            type: 'TRANSFERRED',
-                            title: 'Complaint Transferred',
-                            timeText: formatIST(l.Date || l.Timestamp || l.TransferDate),
-                            rawTime: l.Date || l.Timestamp || l.TransferDate,
-                            details: {
-                                ticket: l.ID,
-                                from: l.FromDepartment,
-                                to: l.NewDepartment,
-                                transferredBy: l.TransferredBy
-                            },
-                            icon: ArrowRight,
-                            color: 'text-blue-600 bg-blue-50 border-blue-100',
-                            iconBg: 'bg-blue-50 text-blue-600',
-                            viewParams: `?ticketId=${l.ID}`
-                        });
-                    });
-                }
-
-                setNotifications(allEvents);
-            } catch (e) {
-                console.error("Notification processing error:", e);
-            } finally {
-                setIsPolling(false);
             }
-        };
 
-        fetchNotifs();
-        const interval = setInterval(() => {
-            if (!document.hidden) {
-                setIsPolling(true);
-                fetchNotifs();
+            // Transfer Notifications
+            if (isAdmin && transferData) {
+                transferData.forEach(l => {
+                    allEvents.push({
+                        id: l.ID,
+                        type: 'TRANSFERRED',
+                        title: 'Complaint Transferred',
+                        timeText: formatIST(l.Date || l.Timestamp || l.TransferDate),
+                        rawTime: l.Date || l.Timestamp || l.TransferDate,
+                        details: {
+                            ticket: l.ID,
+                            from: l.FromDepartment,
+                            to: l.NewDepartment,
+                            transferredBy: l.TransferredBy
+                        },
+                        icon: ArrowRight,
+                        color: 'text-blue-600 bg-blue-50 border-blue-100',
+                        iconBg: 'bg-blue-50 text-blue-600',
+                        viewParams: `?ticketId=${l.ID}`
+                    });
+                });
             }
-        }, 30000); // Polling every 30s for performance
-        return () => clearInterval(interval);
-    }, [user]);
+
+            setNotifications(allEvents);
+        } catch (e) {
+            console.error("Notification engine error:", e);
+        }
+    }, [user, complaintsData, transferData, boosterData]);
 
     const renderNotificationItem = (n, i, full = false) => {
         return (
@@ -502,7 +454,7 @@ const Navbar = () => {
     // Profile Update Handler
     const handleUpdateProfile = async (updates) => {
         try {
-            await sheetsService.updateUser({
+            await firebaseService.updateUser({
                 ...updates,
                 OldUsername: user.Username
             });

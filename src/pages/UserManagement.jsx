@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
+
 import { useAuth } from '../context/AuthContext';
 import { DEPARTMENTS } from '../constants/appData';
 import { Check, X, Shield, User as UserIcon, Lock, Search, Save, Edit2, Phone, ChevronLeft, ChevronRight, UserPlus, Trash2, Key, ArrowRight, Eye, EyeOff } from 'lucide-react';
@@ -42,7 +43,8 @@ const UserManagement = () => {
     const loadUsers = async () => {
         setLoading(true);
         try {
-            const data = await sheetsService.getUsers();
+            const data = await firebaseService.getUsers();
+
             setUsers(data);
         } catch (err) {
             console.error(err);
@@ -59,7 +61,8 @@ const UserManagement = () => {
     // Handle Update from Panel
     const handleUpdateUser = async (updatedData) => {
         try {
-            await sheetsService.updateUser({
+            await firebaseService.updateUser({
+
                 ...updatedData,
                 OldUsername: selectedUser.Username
             });
@@ -77,7 +80,8 @@ const UserManagement = () => {
         const targetUsername = deleteConfirm.Username;
         setDeleteConfirm(null);
         try {
-            await sheetsService.deleteUser(targetUsername);
+            await firebaseService.deleteUser(targetUsername);
+
             setActionSuccess("User access revoked/deleted. 🗑️");
             loadUsers();
         } catch (error) {
@@ -92,9 +96,17 @@ const UserManagement = () => {
             return;
         }
         setLoading(true);
-        const tempUser = { ...newUserForm, Status: 'Active' };
+        const tempUser = {
+            ...newUserForm,
+            Status: 'Active',
+            Permissions: {
+                cmsAccess: true,
+                assetsAccess: true
+            }
+        };
         try {
-            await sheetsService.registerUser(tempUser);
+            await firebaseService.registerUser(tempUser);
+
             setActionSuccess("Member added successfully! 🚀");
             setAddingUser(false);
             setNewUserForm({ Username: '', Password: '', Department: 'General', Mobile: '', Role: 'user' });
@@ -113,7 +125,8 @@ const UserManagement = () => {
         if (!confirm(`Approve access for ${u.Username}?`)) return;
         setIsApproving(true);
         try {
-            await sheetsService.updateUser({ Username: u.Username, Status: 'Active', OldUsername: u.Username });
+            await firebaseService.updateUser({ Username: u.Username, Status: 'Active', OldUsername: u.Username });
+
             setActionSuccess("User Approved! Account is now active. ✅");
             loadUsers();
         } catch (error) {
@@ -172,92 +185,138 @@ const UserManagement = () => {
 
             <SuccessPopup message={actionSuccess} onClose={() => setActionSuccess(null)} />
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-
+            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse table-compact min-w-[800px]">
+                    <table className="w-full text-left border-collapse min-w-[900px]">
                         <thead>
-                            <tr className="text-table-header text-slate-500 tracking-wide font-bold">
-                                <th className="px-6 py-4">Identity</th>
-                                <th className="px-6 py-4">Department</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Security</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                            <tr className="bg-slate-50/50 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+                                <th className="px-6 py-5">Identity Control</th>
+                                <th className="px-6 py-5">Department / Access</th>
+                                <th className="px-6 py-5">Status</th>
+                                <th className="px-6 py-5">Security Key</th>
+                                <th className="px-6 py-5 text-right">Registry Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-100/50">
                             {loading ? (
-                                <tr><td colSpan="5" className="p-20 text-center text-slate-300 font-black uppercase tracking-widest animate-pulse">Loading Registry...</td></tr>
+                                <tr>
+                                    <td colSpan="5" className="p-24 text-center">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <div className="w-10 h-10 border-4 border-slate-100 border-t-[#2e7d32] rounded-full animate-spin"></div>
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">Synchronizing Registry...</span>
+                                        </div>
+                                    </td>
+                                </tr>
                             ) : paginatedUsers.map((u, idx) => (
-                                <tr key={u.Username || idx} className="hover:bg-[#f8faf9] transition-colors group">
-                                    <td className="px-6 py-4 cursor-pointer" onClick={() => handleEditClick(u)}>
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white shadow-none overflow-hidden ${u.Role === 'admin' ? 'bg-[#2e7d32]' : 'bg-slate-200 text-slate-400'}`}>
-                                                {u.ProfilePhoto ? (
-                                                    <img src={u.ProfilePhoto} alt="DP" className="w-full h-full object-cover object-center" loading="lazy" />
-                                                ) : (
-                                                    u.Username ? u.Username[0].toUpperCase() : '?'
+                                <tr key={u.Username || idx} className="group hover:bg-[#f8faf9]/80 transition-all duration-300">
+                                    <td className="px-6 py-5 cursor-pointer" onClick={() => handleEditClick(u)}>
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative">
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white shadow-sm ring-4 ring-white transition-transform group-hover:scale-105 duration-300 overflow-hidden ${u.Role === 'admin' ? 'bg-[#1f2d2a]' :
+                                                    u.Role === 'manager' ? 'bg-[#2e7d32]' : 'bg-slate-200 text-slate-400'
+                                                    }`}>
+                                                    {u.ProfilePhoto ? (
+                                                        <img src={u.ProfilePhoto} alt="DP" className="w-full h-full object-cover" loading="lazy" />
+                                                    ) : (
+                                                        u.Username ? u.Username[0].toUpperCase() : '?'
+                                                    )}
+                                                </div>
+                                                {u.Status === 'Active' && (
+                                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full shadow-sm"></div>
                                                 )}
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[11px] font-black text-[#1f2d2a] group-hover:text-[#2e7d32] transition-colors uppercase tracking-tight">{u.Username}</span>
-                                                <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{u.Role}</span>
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-[12px] font-black text-[#1f2d2a] uppercase tracking-tight group-hover:text-[#2e7d32] transition-colors">{u.Username}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-widest border ${u.Role === 'admin' ? 'bg-slate-900 text-white border-slate-900' :
+                                                        u.Role === 'manager' ? 'bg-[#cfead6] text-[#2e7d32] border-[#2e7d32]/10' :
+                                                            'bg-slate-50 text-slate-400 border-slate-100'
+                                                        }`}>
+                                                        {u.Role}
+                                                    </span>
+                                                    {u.Username === 'AM Sir' && <Shield size={10} className="text-[#2e7d32]" />}
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-[#f8faf9] text-slate-400 border border-[#dcdcdc] uppercase tracking-widest">
-                                            {u.Department}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${u.Status === 'Active' ? 'bg-[#2e7d32]' : 'bg-amber-400'}`}></div>
-                                            <span className="text-[10px] font-black text-[#1f2d2a] uppercase tracking-widest">{u.Status}</span>
+                                    <td className="px-6 py-5">
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{u.Department}</span>
+                                            <div className="flex gap-1.5">
+                                                {u.Permissions?.cmsAccess && (
+                                                    <span className="text-[7px] font-black px-1.5 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full uppercase tracking-tighter">CMS</span>
+                                                )}
+                                                {u.Permissions?.assetsAccess && (
+                                                    <span className="text-[7px] font-black px-1.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-full uppercase tracking-tighter">ASSETS</span>
+                                                )}
+                                            </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 cursor-pointer group/pass" onClick={(e) => { e.stopPropagation(); setUsers(users.map(item => item.Username === u.Username ? { ...item, showPass: !item.showPass } : item)) }}>
-                                            <span className="text-[10px] font-mono text-slate-300 font-black">{u.showPass ? u.Password : '••••'}</span>
-                                            <Key size={12} className="text-slate-200 group-hover/pass:text-[#2e7d32] transition-colors" />
+                                    <td className="px-6 py-5">
+                                        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${u.Status === 'Active' ? 'bg-[#f0f9f1] border-emerald-100 text-[#2e7d32]' : 'bg-amber-50 border-amber-100 text-amber-600'
+                                            }`}>
+                                            <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${u.Status === 'Active' ? 'bg-[#2e7d32]' : 'bg-amber-400'}`}></div>
+                                            <span className="text-[9px] font-black uppercase tracking-widest">{u.Status}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-right">
+                                    <td className="px-6 py-5">
+                                        <div
+                                            className="inline-flex items-center gap-3 px-3 py-2 bg-slate-50 hover:bg-white border border-slate-100 rounded-xl cursor-pointer group/pass transition-all"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setUsers(users.map(item => item.Username === u.Username ? { ...item, showPass: !item.showPass } : item))
+                                            }}
+                                        >
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter mb-0.5">Key Access</span>
+                                                <span className="text-[11px] font-mono font-black text-[#1f2d2a] tracking-widest">
+                                                    {u.showPass ? u.Password : '••••••••'}
+                                                </span>
+                                            </div>
+                                            <div className="p-1.5 bg-white border border-slate-100 rounded-lg group-hover/pass:border-[#2e7d32]/20 group-hover/pass:text-[#2e7d32] transition-colors text-slate-300">
+                                                {u.showPass ? <EyeOff size={12} /> : <Eye size={12} />}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5 text-right">
                                         <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                                             {u.Username === 'AM Sir' ? (
                                                 user.Username === 'AM Sir' ? (
-                                                    <button onClick={() => handleEditClick(u)} className="p-2 text-slate-300 hover:text-[#2e7d32] transition-all"><Edit2 size={16} /></button>
+                                                    <button onClick={() => handleEditClick(u)} className="p-2.5 text-slate-400 hover:text-[#2e7d32] hover:bg-emerald-50 rounded-xl transition-all"><Edit2 size={16} /></button>
                                                 ) : (
-                                                    <span className="p-2 text-slate-200 cursor-not-allowed" title="Super Admin Protected"><Lock size={16} /></span>
+                                                    <div className="p-2.5 text-slate-200 cursor-not-allowed bg-slate-50 rounded-xl border border-slate-100" title="Super Admin Protected">
+                                                        <Lock size={16} />
+                                                    </div>
                                                 )
                                             ) : (
                                                 <>
-                                                    {u.Status !== 'Active' && (
+                                                    {u.Status !== 'Active' ? (
                                                         <>
                                                             <button
                                                                 onClick={() => handleApprove(u)}
                                                                 disabled={isApproving}
-                                                                title="Approve User"
-                                                                className="px-3 py-1 bg-[#f0f9f1] text-[#2e7d32] hover:bg-[#cfead6] rounded-lg transition-all border border-[#cfead6] text-[10px] font-black uppercase tracking-widest flex items-center gap-1"
+                                                                className="px-4 py-2 bg-[#2e7d32] text-white hover:bg-[#256628] rounded-xl transition-all shadow-sm text-[9px] font-black uppercase tracking-widest flex items-center gap-2 active:scale-95"
                                                             >
                                                                 <Check size={14} /> Approve
                                                             </button>
                                                             <button
                                                                 onClick={() => setDeleteConfirm(u)}
-                                                                title="Reject/Delete"
-                                                                className="px-3 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-all border border-rose-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-1"
+                                                                className="px-4 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition-all border border-rose-100 text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
                                                             >
-                                                                <X size={14} /> Reject
+                                                                <Trash2 size={14} /> Purge
                                                             </button>
                                                         </>
-                                                    )}
-
-                                                    {u.Status === 'Active' && (
-                                                        <button onClick={() => handleEditClick(u)} className="p-2 text-slate-300 hover:text-[#2e7d32] transition-all" title="Edit Profile"><Edit2 size={16} /></button>
-                                                    )}
-
-                                                    {u.Username !== user.Username && (
-                                                        <button onClick={() => setDeleteConfirm(u)} className="p-2 text-slate-400 hover:text-red-500 transition-colors" title="Delete User"><Trash2 size={16} /></button>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1">
+                                                            <button onClick={() => handleEditClick(u)} className="p-2.5 text-slate-400 hover:text-[#2e7d32] hover:bg-emerald-50 rounded-xl transition-all border border-transparent hover:border-emerald-100" title="Modify Authority">
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            {u.Username !== user.Username && (
+                                                                <button onClick={() => setDeleteConfirm(u)} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-transparent hover:border-rose-100" title="Revoke Access">
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </>
                                             )}
@@ -282,44 +341,47 @@ const UserManagement = () => {
             {/* Add User Modal */}
             {
                 addingUser && (
-                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40">
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-[#dcdcdc] relative overflow-hidden"
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl border border-slate-200/50 relative overflow-hidden"
                         >
-                            <div className="absolute top-0 inset-x-0 h-1.5 bg-[#2e7d32]"></div>
                             <div className="flex justify-between items-center mb-8">
-                                <h3 className="text-xl font-black text-[#1f2d2a] flex items-center gap-3 uppercase tracking-tight">
-                                    <div className="p-2 bg-[#cfead6] rounded-xl text-[#2e7d32] border border-[#2e7d32]/10">
-                                        <UserPlus size={20} />
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-[#f0f9f1] rounded-2xl text-[#2e7d32] border border-[#cfead6]">
+                                        <UserPlus size={24} />
                                     </div>
-                                    New Authority
-                                </h3>
-                                <button onClick={() => !loading && setAddingUser(false)} disabled={loading} className="text-slate-300 hover:text-rose-500 transition-colors disabled:opacity-50">
+                                    <div>
+                                        <h3 className="text-xl font-black text-[#1f2d2a] uppercase tracking-tight">New Provision</h3>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Authorized System Member</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => !loading && setAddingUser(false)} disabled={loading} className="p-2 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-full transition-all disabled:opacity-50">
                                     <X size={24} />
                                 </button>
                             </div>
 
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
-                                        Identity Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="w-full p-3.5 bg-slate-50 border border-[#dcdcdc] rounded-xl font-black text-xs uppercase tracking-tight text-[#1f2d2a] focus:bg-white focus:border-[#2e7d32] outline-none transition-all placeholder:text-slate-300"
-                                        placeholder="Full Name"
-                                        value={newUserForm.Username}
-                                        onChange={e => setNewUserForm({ ...newUserForm, Username: e.target.value })}
-                                    />
+                            <div className="space-y-5">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identity Name</label>
+                                    <div className="relative group">
+                                        <UserIcon className="absolute left-4 top-3.5 text-slate-300 group-focus-within:text-[#2e7d32] transition-colors" size={18} />
+                                        <input
+                                            type="text"
+                                            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-black text-xs uppercase tracking-tight text-[#1f2d2a] focus:bg-white focus:border-[#2e7d32] focus:ring-4 focus:ring-emerald-50 outline-none transition-all placeholder:text-slate-300"
+                                            placeholder="Enter Full Name"
+                                            value={newUserForm.Username}
+                                            onChange={e => setNewUserForm({ ...newUserForm, Username: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Provision Role</label>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Access Tier</label>
                                         <select
-                                            className="w-full p-3.5 bg-slate-50 border border-[#dcdcdc] rounded-xl font-black text-xs uppercase tracking-tight text-[#1f2d2a] outline-none"
+                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-black text-xs uppercase tracking-tight text-[#1f2d2a] outline-none cursor-pointer focus:bg-white focus:border-[#2e7d32]"
                                             value={newUserForm.Role}
                                             onChange={e => setNewUserForm({ ...newUserForm, Role: e.target.value })}
                                         >
@@ -328,57 +390,67 @@ const UserManagement = () => {
                                             <option value="admin">Admin</option>
                                         </select>
                                     </div>
-                                    <div>
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Department</label>
-                                        <div className="relative">
-                                            <select
-                                                className="w-full p-3.5 bg-slate-50 border border-[#dcdcdc] rounded-xl font-black text-xs uppercase tracking-tight text-[#1f2d2a] outline-none appearance-none"
-                                                value={newUserForm.Department}
-                                                onChange={e => setNewUserForm({ ...newUserForm, Department: e.target.value })}
-                                            >
-                                                <option value="General">General</option>
-                                                {DEPARTMENTS.sort().map(d => (
-                                                    <option key={d} value={d}>{d}</option>
-                                                ))}
-                                            </select>
-                                            <div className="absolute right-3 top-4 pointer-events-none text-slate-300 text-[10px]">▼</div>
-                                        </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Department</label>
+                                        <select
+                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-black text-xs uppercase tracking-tight text-[#1f2d2a] outline-none cursor-pointer focus:bg-white focus:border-[#2e7d32]"
+                                            value={newUserForm.Department}
+                                            onChange={e => setNewUserForm({ ...newUserForm, Department: e.target.value })}
+                                        >
+                                            <option value="General">General</option>
+                                            {DEPARTMENTS.sort().map(d => (
+                                                <option key={d} value={d}>{d}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Communication</label>
-                                    <input
-                                        type="tel"
-                                        className="w-full p-3.5 bg-slate-50 border border-[#dcdcdc] rounded-xl font-black text-xs uppercase tracking-tight text-[#1f2d2a] outline-none focus:bg-white focus:border-[#2e7d32]"
-                                        placeholder="Mobile (10 Digits)"
-                                        value={newUserForm.Mobile}
-                                        onChange={e => setNewUserForm({ ...newUserForm, Mobile: e.target.value })}
-                                    />
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Communication</label>
+                                    <div className="relative group">
+                                        <Phone className="absolute left-4 top-3.5 text-slate-300 group-focus-within:text-[#2e7d32] transition-colors" size={18} />
+                                        <input
+                                            type="tel"
+                                            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-black text-xs uppercase tracking-tight text-[#1f2d2a] outline-none focus:bg-white focus:border-[#2e7d32] focus:ring-4 focus:ring-emerald-50"
+                                            placeholder="Mobile Number"
+                                            value={newUserForm.Mobile}
+                                            onChange={e => setNewUserForm({ ...newUserForm, Mobile: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Access Code</label>
-                                    <input
-                                        type="text"
-                                        className="w-full p-3.5 bg-slate-50 border border-[#dcdcdc] rounded-xl font-black text-xs uppercase tracking-tight text-[#1f2d2a] outline-none focus:bg-white focus:border-[#2e7d32]"
-                                        placeholder="Password"
-                                        value={newUserForm.Password}
-                                        onChange={e => setNewUserForm({ ...newUserForm, Password: e.target.value })}
-                                    />
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Security Key</label>
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 top-3.5 text-slate-300 group-focus-within:text-[#2e7d32] transition-colors" size={18} />
+                                        <input
+                                            type={newUserForm.showNewPass ? "text" : "password"}
+                                            className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-black text-xs tracking-widest text-[#1f2d2a] outline-none focus:bg-white focus:border-[#2e7d32] focus:ring-4 focus:ring-emerald-50 transition-all font-mono"
+                                            placeholder="••••••••"
+                                            value={newUserForm.Password}
+                                            onChange={e => setNewUserForm({ ...newUserForm, Password: e.target.value })}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewUserForm({ ...newUserForm, showNewPass: !newUserForm.showNewPass })}
+                                            className="absolute right-4 top-3.5 text-slate-300 hover:text-[#2e7d32] transition-colors"
+                                        >
+                                            {newUserForm.showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <button
                                     onClick={handleAddUser}
                                     disabled={loading || !newUserForm.Username || !newUserForm.Password}
-                                    className="w-full py-4.5 bg-[#2e7d32] hover:bg-[#256628] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-none transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed border border-transparent"
+                                    className="w-full py-5 bg-[#2e7d32] hover:bg-[#256628] text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg shadow-emerald-100 transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed group"
                                 >
                                     {loading ? (
                                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                                     ) : (
                                         <>
-                                            Confirm Registration
-                                            <ArrowRight size={18} />
+                                            Provision Account
+                                            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                         </>
                                     )}
                                 </button>

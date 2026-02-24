@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
+
 import { Key, Check, Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,7 +28,8 @@ const ChangePassword = () => {
 
         setIsLoading(true);
         try {
-            await sheetsService.changePassword(user.Username, form.current, form.new);
+            await firebaseService.changePassword(user.Username, form.current, form.new);
+
             setSuccess(true);
             setTimeout(() => {
                 logout();

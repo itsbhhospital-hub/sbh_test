@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useLoading } from './LoadingContext';
 import { sheetsService, getGoogleDriveDirectLink } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
 import { normalize } from '../utils/dataUtils';
 
 const AuthContext = createContext(null);
@@ -41,6 +42,10 @@ export const AuthProvider = ({ children }) => {
                     if (parsed.ProfilePhoto) {
                         parsed.ProfilePhoto = getGoogleDriveDirectLink(parsed.ProfilePhoto);
                     }
+                    // HOTFIX: Ensure Permissions object exists even for cached legacy sessions
+                    if (!parsed.Permissions) {
+                        parsed.Permissions = { cmsAccess: true, assetsAccess: true };
+                    }
                     setUser(parsed);
                 } catch (e) {
                     console.error("Failed to parse stored user", e);
@@ -67,20 +72,8 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (username, password) => {
         try {
-            const users = await sheetsService.getUsers();
-
-            const target = normalize(username);
-            const foundUser = users.find(u => normalize(u.Username) === target);
-
-            if (!foundUser) {
-                console.warn("LOGIN FAILED: User not found.");
-                throw new Error('User not found. Please check username.');
-            }
-
-            if (String(foundUser.Password) !== String(password)) {
-                console.warn("LOGIN FAILED: Wrong password.");
-                throw new Error('Incorrect password. Please try again.');
-            }
+            // Switch to Firebase Manual Login
+            const foundUser = await firebaseService.manualLogin(username, password);
 
             if (String(foundUser.Status) === 'Terminated' || String(foundUser.Status) === 'Rejected') {
                 throw new Error('TERMINATED: Your account has been rejected or terminated by the administrator.');
@@ -96,7 +89,8 @@ export const AuthProvider = ({ children }) => {
                 Department: foundUser.Department,
                 Status: foundUser.Status,
                 Mobile: foundUser.Mobile,
-                ProfilePhoto: foundUser.ProfilePhoto // Added for Avatar Display
+                ProfilePhoto: foundUser.ProfilePhoto, // Added for Avatar Display
+                Permissions: foundUser.Permissions || { cmsAccess: true, assetsAccess: true } // Ensure defaults
             };
 
             setUser(userSession);
@@ -114,11 +108,13 @@ export const AuthProvider = ({ children }) => {
     };
 
     const signup = async (userData) => {
-        await sheetsService.registerUser(userData);
-        // Auto-login or wait for approval? "id approval ke liye admin id me jaye" -> Wait approval
-        // So just return success
+        // Register in Firebase (Firestore)
+        // Note: For now, we'll just add it to 'users' collection
+        // In a real flow, we'd use Firebase Auth too.
+        await firebaseService.register(userData.Username + "@sbh.com", userData.Password, userData);
         return true;
     };
+
 
     const logout = () => {
         setUser(null);
@@ -139,4 +135,17 @@ export const AuthProvider = ({ children }) => {
     );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (context === undefined || context === null) {
+        console.error("🚨 [AuthContext] useAuth must be used within an AuthProvider");
+        return {
+            user: null,
+            login: async () => { throw new Error("Auth Provider not ready"); },
+            signup: async () => { },
+            logout: () => { },
+            loading: true
+        };
+    }
+    return context;
+};

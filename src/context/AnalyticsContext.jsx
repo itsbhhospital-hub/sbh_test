@@ -5,19 +5,15 @@ import { normalize, safeNumber } from '../utils/dataUtils';
 
 const AnalyticsContext = createContext(null);
 
+import { useIntelligence } from './IntelligenceContext';
+
 export const AnalyticsProvider = ({ children }) => {
     const { user } = useAuth();
+    const { allTickets, allRatings, users, allBoosters: boosters } = useIntelligence();
     const [lastUpdated, setLastUpdated] = useState(new Date());
 
-    // 1. Raw Data (Cached in Memory)
-    const [allTickets, setAllTickets] = useState([]);
-    const [allRatings, setAllRatings] = useState([]);
-    const [userPerformanceData, setUserPerformanceData] = useState([]);
-    const [boosters, setBoosters] = useState([]);
-    const [users, setUsers] = useState([]);
-
-    const [loading, setLoading] = useState(true);
-    const [isSyncing, setIsSyncing] = useState(false);
+    const loading = !allTickets || allTickets.length === 0;
+    const isSyncing = false; // No longer polling sheets
 
     // 2. Computed Metrics (Derived from Raw Data)
     const [deptStats, setDeptStats] = useState([]);
@@ -28,55 +24,6 @@ export const AnalyticsProvider = ({ children }) => {
 
     // Derived flags
     const isAdmin = user?.Role?.toUpperCase() === 'ADMIN' || user?.Role?.toUpperCase() === 'SUPER_ADMIN';
-
-    // -------------------------------------------------------------------------
-    // 🔄 POLLING ENGINE (With Collision Prevention)
-    // -------------------------------------------------------------------------
-    useEffect(() => {
-        if (!user) return;
-
-        let isMounted = true;
-
-        const fetchData = async () => {
-            if (isSyncing) return; // Prevention Check
-            setIsSyncing(true);
-
-            try {
-                // Fetch All Core Sheets
-                const [tickets, ratings, perf, boosterList, userList] = await Promise.all([
-                    sheetsService.getComplaints(true, true),
-                    sheetsService.getRatings(true, true),
-                    sheetsService.getAllUserPerformance(true, true),
-                    sheetsService.getBoosters(true, true), // NEW: Fetch boosters
-                    sheetsService.getUsers(true, true)
-                ]);
-
-                if (isMounted) {
-                    setAllTickets(tickets);
-                    setAllRatings(ratings);
-                    setUserPerformanceData(perf);
-                    setBoosters(boosterList);
-                    setUsers(userList);
-                    setLastUpdated(new Date());
-                    setLoading(false);
-                }
-            } catch (error) {
-                console.error("Analytics Poll Failed:", error);
-            } finally {
-                if (isMounted) setIsSyncing(false);
-            }
-        };
-
-        // Initial Fetch
-        fetchData();
-
-        // 20 Second Refresh Interval (Master Requirement)
-        const interval = setInterval(fetchData, 20000);
-        return () => {
-            clearInterval(interval);
-            isMounted = false;
-        };
-    }, [user]);
 
     // -------------------------------------------------------------------------
     // 🧠 INTELLIGENCE ENGINE (Runs when data changes)

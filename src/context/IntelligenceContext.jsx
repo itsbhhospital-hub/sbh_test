@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
 import { assetsService } from '../services/assetsService';
 import { useAuth } from './AuthContext';
 import { runAIAnalysis } from '../services/aiCore';
 
 import { normalize, safeNumber } from '../utils/dataUtils';
 
-const IntelligenceContext = createContext(null);
+const IntelligenceContext = createContext({ loading: true });
 
 // --- DASHBOARD HELPERS ---
 const findField = (item, prefixes) => {
@@ -60,7 +61,13 @@ export const IntelligenceProvider = ({ children }) => {
     // RAW DATA STATE
     // ------------------------------------------------------------------
     const [allTickets, setAllTickets] = useState([]);
+    const [allRatings, setAllRatings] = useState([]);
+    const [allTransfers, setAllTransfers] = useState([]);
+    const [allExtensions, setAllExtensions] = useState([]);
+    const [allBoosters, setAllBoosters] = useState([]);
     const [assets, setAssets] = useState([]);
+    const [users, setUsers] = useState([]);
+
     const [stats, setStats] = useState({
         open: 0, pending: 0, solved: 0, transferred: 0, extended: 0, delayed: 0, activeStaff: 0
     });
@@ -68,10 +75,6 @@ export const IntelligenceProvider = ({ children }) => {
         total: 0, risk: 0, void: 0, serviceDue: 0, healthy: 0
     });
     const [trendStats, setTrendStats] = useState([]);
-    const [users, setUsers] = useState([]);
-    const [boosters, setBoosters] = useState([]);
-    const [allRatings, setAllRatings] = useState([]);
-
     const [loading, setLoading] = useState(true);
     const [lastSync, setLastSync] = useState(null);
 
@@ -109,20 +112,24 @@ export const IntelligenceProvider = ({ children }) => {
 
         let health = 100;
         let stress = 0;
-        const flow = { open: 0, solved: 0, delayed: 0, transferred: 0, extended: 0, efficiency: 0, activeStaff: 0 };
+        const globalFlow = { open: 0, pending: 0, solved: 0, delayed: 0, transferred: 0, extended: 0, efficiency: 0, activeStaff: 0 };
+        const personalFlow = { open: 0, pending: 0, solved: 0, delayed: 0, transferred: 0, extended: 0, efficiency: 0, activeStaff: 0 };
         const depts = {};
         const predictions = [];
         const detailedRisks = [];
 
+        const userMap = new Map();
+        usersList.forEach(u => userMap.set(normalize(u.Username), u));
+
         const staffMap = {};
-        const initStaff = (name) => {
-            const nName = normalize(name);
+        const initStaff = (username) => {
+            const nName = normalize(username);
             if (!nName) return null;
             if (!staffMap[nName]) {
-                const userObj = usersList.find(u => normalize(u.Username) === nName);
+                const userObj = userMap.get(nName);
                 staffMap[nName] = {
-                    name: userObj ? userObj.Username : name,
-                    Username: userObj ? userObj.Username : name,
+                    name: userObj ? userObj.Username : username,
+                    Username: userObj ? userObj.Username : username,
                     dept: userObj ? userObj.Department : 'Unknown',
                     solved: 0,
                     resolved: 0,
@@ -139,13 +146,23 @@ export const IntelligenceProvider = ({ children }) => {
         };
 
         // Initialize from Users list
-        for (let i = 0; i < usersList.length; i++) {
-            initStaff(usersList[i].Username);
-        }
+        usersList.forEach(u => initStaff(u.Username));
+
+        // Create a lookup for current ticket data to help attribute ratings
+        const ticketLookup = new Map();
+        tickets.forEach(t => ticketLookup.set(String(t.ID), t));
 
         // Process Ratings
         ratings.forEach(r => {
-            const resolver = normalize(r.ResolvedBy || r.Resolver);
+            let resolverName = r.ResolvedBy || r.Resolver;
+
+            // Fallback: If rating document doesn't have ResolvedBy, find it from the ticket
+            if (!resolverName && r.ComplaintID) {
+                const t = ticketLookup.get(String(r.ComplaintID));
+                if (t) resolverName = t.ResolvedBy;
+            }
+
+            const resolver = normalize(resolverName);
             const score = parseInt(r.Rating || r.Stars || 0);
             if (resolver && score > 0) {
                 const s = initStaff(resolver);
@@ -179,26 +196,38 @@ export const IntelligenceProvider = ({ children }) => {
 
             if (!depts[dept]) depts[dept] = { open: 0, solved: 0, pending: 0, delayed: 0, extended: 0, transfers: 0 };
 
+            const isMe = normalize(user?.Username) === normalize(t.ReportedBy) || normalize(user?.Username) === normalize(t.ResolvedBy);
+            const isSuperAdmin = ['super_admin', 'superadmin'].includes(normalize(user?.Role)) || user?.Username === 'AM Sir';
+            const isAdmin = ['admin'].includes(normalize(user?.Role)) || isSuperAdmin;
+
             if (isActive) {
-                flow.open++;
+                globalFlow.open++;
+                if (isSuperAdmin || isMe) personalFlow.open++;
+
                 if (resolver) {
                     const s = initStaff(resolver);
                     if (s) s.active++;
                 }
 
                 if (status === 'open') depts[dept].open++;
-                else if (['pending', 'in-progress', 're-open'].includes(status)) depts[dept].pending++;
-                else if (status === 'transferred') { depts[dept].transfers++; flow.transferred++; }
+                else if (['pending', 'in-progress', 're-open'].includes(status)) {
+                    depts[dept].pending++;
+                    globalFlow.pending++;
+                    if (isSuperAdmin || isMe) personalFlow.pending++;
+                }
+                else if (status === 'transferred') { depts[dept].transfers++; globalFlow.transferred++; if (isSuperAdmin || isMe) personalFlow.transferred++; }
 
                 const hasTargetDate = t.TargetDate && String(t.TargetDate).trim() !== '' && String(t.TargetDate).toLowerCase() !== 'none';
                 if (status === 'extended' || status === 'extend' || hasTargetDate) {
                     depts[dept].extended++;
-                    flow.extended++;
+                    globalFlow.extended++;
+                    if (isSuperAdmin || isMe) personalFlow.extended++;
                 }
 
                 if (isDelayed) {
                     depts[dept].delayed++;
-                    flow.delayed++;
+                    globalFlow.delayed++;
+                    if (isSuperAdmin || isMe) personalFlow.delayed++;
                     if (resolver) {
                         const s = initStaff(resolver);
                         if (s) s.delayed++;
@@ -215,7 +244,9 @@ export const IntelligenceProvider = ({ children }) => {
                 }
             } else {
                 depts[dept].solved++;
-                flow.solved++;
+                globalFlow.solved++;
+                if (isSuperAdmin || isMe) personalFlow.solved++;
+
                 if (resolver) {
                     const s = initStaff(resolver);
                     if (s) {
@@ -241,7 +272,7 @@ export const IntelligenceProvider = ({ children }) => {
             const speedWeight = s.speedCount > 0 ? Math.max(0, 20 - (avgSpeedHours / 4) * 20) : 10;
 
             const efficiency = ratingWeight + volumeWeight + speedWeight;
-            if (s.active > 0) flow.activeStaff++;
+            if (s.active > 0) globalFlow.activeStaff++;
 
             return {
                 ...s,
@@ -312,25 +343,33 @@ export const IntelligenceProvider = ({ children }) => {
             setAssetStats(aStats);
         }
 
-        // Heatmap Trend Analysis (Last 7 Days)
+        // 🟢 OPTIMIZED HEATMAP TREND ANALYSIS
         const heatmapTrends = [];
         const daysToMap = 7;
         const deptsInSystem = Object.keys(depts);
 
+        // Map tickets to date keys for O(1) daily lookup
+        const ticketsByDate = new Map();
+        tickets.forEach(t => {
+            const tDate = parseDateSafe(t.Date || t.Timestamp);
+            if (tDate) {
+                const dayKey = tDate.toDateString();
+                if (!ticketsByDate.has(dayKey)) ticketsByDate.set(dayKey, []);
+                ticketsByDate.get(dayKey).push(t);
+            }
+        });
+
         for (let i = daysToMap - 1; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
+            const dayKey = d.toDateString();
             const label = d.toLocaleDateString('en-US', { weekday: 'short' });
             const snapshot = { name: label };
 
+            const dailyTickets = ticketsByDate.get(dayKey) || [];
             deptsInSystem.forEach(dept => {
-                const count = tickets.filter(t => {
-                    const tDate = parseDateSafe(t.Date || t.Timestamp);
-                    return tDate &&
-                        tDate.toDateString() === d.toDateString() &&
-                        normalize(t.Department) === normalize(dept);
-                }).length;
-                snapshot[dept] = count;
+                const normDept = normalize(dept);
+                snapshot[dept] = dailyTickets.filter(t => normalize(t.Department) === normDept).length;
             });
             heatmapTrends.push(snapshot);
         }
@@ -349,7 +388,8 @@ export const IntelligenceProvider = ({ children }) => {
         setPredictedDelays(predictions);
         setDeptRisks(depts);
         setDeptStats(Object.entries(depts).map(([name, s]) => ({ name, ...s })));
-        setFlowStats(flow);
+        setFlowStats(globalFlow);
+        setStats(personalFlow);
         setStaffStats(rankedStaffList);
         setTrendStats(Object.values(trends));
         setAiRiskReport(aiResults.riskReport);
@@ -424,54 +464,88 @@ export const IntelligenceProvider = ({ children }) => {
         if (!user || isRefreshing) return;
         setIsRefreshing(true);
         try {
-            const isAdmin = ['admin', 'super_admin', 'superadmin'].includes(normalize(user.Role));
-            const [statsData, fetchedUsers, allData, boosterData, ratingsData, assetsData] = await Promise.all([
-                sheetsService.getDashboardStats(user.Username, user.Department, user.Role),
-                isAdmin ? sheetsService.getUsers() : Promise.resolve([]),
-                sheetsService.getComplaints(false, true),
-                sheetsService.getBoosters(true, true).catch(() => []),
-                sheetsService.getRatings(false, true).catch(() => []),
+            const isSuperAdmin = ['super_admin', 'superadmin'].includes(normalize(user.Role)) || user.Username === 'AM Sir';
+            const isAdmin = ['admin'].includes(normalize(user.Role)) || isSuperAdmin;
+
+            const [statsData, fetchedUsers, fetchedAssets] = await Promise.all([
+                firebaseService.getDashboardStats(user.Username, user.Department, user.Role),
+                (isAdmin || isSuperAdmin) ? firebaseService.getUsers() : Promise.resolve([]),
                 assetsService.getAssets().catch(() => [])
             ]);
-
-            if (allData) {
-                const cleanedData = allData.filter(t => {
-                    const idCandidate = t.ID || t.id || t['Ticket ID'] || t.ComplaintID || t.Complaint_ID || t.Complaint_id || '';
-                    const desc = t.Description || t.description || t.Complaint || '';
-                    const cleanId = String(idCandidate).toLowerCase().replace(/[^a-z0-9]/g, '');
-                    return (cleanId !== '' && cleanId !== 'na' && cleanId !== 'undefined') || String(desc).trim() !== '';
-                }).map(t => {
-                    const rawId = t.ID || t.id || t['Ticket ID'] || t.ComplaintID || t.Complaint_ID || t.Complaint_id || '';
-                    const cleanId = String(rawId).toLowerCase().replace(/[^a-z0-9]/g, '');
-                    const finalId = (cleanId !== '' && cleanId !== 'na' && cleanId !== 'undefined') ? rawId : 'N/A';
-                    return { ...t, ID: finalId };
-                });
-
-                setAllTickets(cleanedData);
-                analyzeSystem(cleanedData, ratingsData, assetsData, fetchedUsers || users);
-            }
 
             // --- BATCHED STATE UPDATES ---
             if (statsData) setStats(prev => ({ ...prev, ...statsData }));
             if (fetchedUsers) setUsers(fetchedUsers);
-            if (boosterData) setBoosters(boosterData);
-            if (ratingsData) setAllRatings(ratingsData);
-            if (assetsData) setAssets(assetsData);
+            if (fetchedAssets) setAssets(fetchedAssets);
             setLastSync(new Date());
         } catch (e) {
             console.error("Sync Failed", e);
         } finally {
             setIsRefreshing(false);
         }
-    }, [user, isRefreshing, analyzeSystem, users]);
+    }, [user, isRefreshing]);
 
     useEffect(() => {
-        if (user) {
-            refreshIntelligence().finally(() => setLoading(false));
-            const timer = setInterval(refreshIntelligence, 45000);
-            return () => clearInterval(timer);
-        }
+        if (!user) return;
+
+        // 1. Initial Load for everything else
+        refreshIntelligence().finally(() => setLoading(false));
+
+        // 2. Real-time Subscriptions
+        console.log("🛰️ [IntelligenceContext] Subscribing to Complaints...");
+        const unsubscribe = firebaseService.subscribeToComplaints((data) => {
+            // 🟢 DEDUPLICATION LOGIC: Use a Map to keep unique IDs
+            const ticketMap = new Map();
+            data.forEach(t => {
+                const id = t.ID || t.id || t['Ticket ID'] || t.ComplaintID || 'N/A';
+                // Only keep the most recent update if duplicates exist
+                if (!ticketMap.has(id)) {
+                    ticketMap.set(id, {
+                        ...t,
+                        ID: id,
+                        Department: t.Department || t.department || 'General',
+                        Unit: t.Unit || t.unit || 'N/A',
+                        Description: t.Description || t.description || t.Complaint || '',
+                        ReportedBy: t.ReportedBy || t.reportedBy || t['Reported By'] || 'Unknown',
+                        Status: t.Status || t.status || 'Open',
+                        Date: t.Date || t.date || t.Timestamp || t.timestamp || new Date().toISOString(),
+                        ResolvedDate: t.ResolvedDate || t.resolvedDate || t['Resolved Date'] || null,
+                        ResolvedBy: t.ResolvedBy || t.resolvedBy || t['Resolved By'] || null,
+                    });
+                }
+            });
+
+            const cleanedData = Array.from(ticketMap.values());
+            setAllTickets(cleanedData);
+            setLastSync(new Date());
+        });
+
+        const unSubRatings = firebaseService.subscribeToCollection('ratings', setAllRatings);
+        const unSubTransfers = firebaseService.subscribeToCollection('transfer_logs', setAllTransfers);
+        const unSubExtensions = firebaseService.subscribeToCollection('extension_logs', setAllExtensions);
+        const unSubBoosters = firebaseService.subscribeToCollection('boosters', setAllBoosters);
+        const unSubAssets = firebaseService.subscribeToAssets(setAssets);
+
+        const unSubUsers = firebaseService.subscribeToCollection('users', (data) => {
+            const isSuperAdmin = ['super_admin', 'superadmin'].includes(normalize(user.Role)) || user.Username === 'AM Sir';
+            const isAdmin = ['admin'].includes(normalize(user.Role)) || isSuperAdmin;
+            setUsers((isAdmin || isSuperAdmin) ? data : []);
+        });
+
+        return () => {
+            unsubscribe();
+            unSubRatings();
+            unSubTransfers();
+            unSubExtensions();
+            unSubBoosters();
+            unSubAssets();
+            unSubUsers();
+        };
     }, [user]);
+
+    useEffect(() => {
+        analyzeSystem(allTickets, allRatings, assets, users);
+    }, [allTickets, allRatings, assets, users, analyzeSystem]);
 
     const getCrisisRisk = useCallback(() => {
         if (stressIndex > 70) return 'CRITICAL';
@@ -481,7 +555,7 @@ export const IntelligenceProvider = ({ children }) => {
 
     return (
         <IntelligenceContext.Provider value={{
-            allTickets, stats, users, boosters, allRatings, lastSync, loading,
+            allTickets, stats, users, allBoosters, boosters: allBoosters, allRatings, allTransfers, allExtensions, lastSync, loading,
             hospitalHealth, deptRisks, deptStats, predictedDelays, stressIndex,
             crisisRisk: getCrisisRisk(), flowStats, staffStats, delayRisks, alerts,
             aiRecommendations, aiRiskReport, aiDeptLoad, aiStaffScores, loadWarnings,

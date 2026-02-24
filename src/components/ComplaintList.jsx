@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
 import { formatIST, parseCustomDate } from '../utils/dateUtils';
+import { normalize } from '../utils/dataUtils';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService'; // Core Firebase Service
 import { useAuth } from '../context/AuthContext';
 import { Clock, CheckCircle, AlertTriangle, Search, Calendar, Hash, X, Building2, User, ArrowRight, RefreshCw, Star, BarChart3, TrendingUp, ChevronRight, Plus, Share2, History as HistoryIcon, Shield, ShieldCheck, Zap, Lock as LockIcon } from 'lucide-react';
 import { useClickOutside } from '../hooks/useClickOutside';
@@ -195,7 +196,13 @@ const ComplaintCard = memo(({ complaint, onClick, aiDecision }) => (
 const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, customReporter = null, customResolver = null, initialFilter = 'All', autoOpenTicket = null, onAutoOpenComplete = () => { } }) => {
     const { user } = useAuth();
     const isAdmin = user?.Role?.toUpperCase() === 'ADMIN' || user?.Role?.toUpperCase() === 'SUPER_ADMIN';
-    const { getAiCaseDecision, lastSync } = useIntelligence();
+    const { getAiCaseDecision, lastSync, staffStats } = useIntelligence();
+
+    // 🟢 Derive user performance from global staffStats
+    const userPerformance = useMemo(() => {
+        if (!staffStats || !user?.Username) return null;
+        return staffStats.find(s => normalize(s.Username) === normalize(user.Username)) || null;
+    }, [staffStats, user]);
     const [complaints, setComplaints] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState(initialFilter); // Initialize with prop
@@ -220,7 +227,6 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
     const [ratingsLog, setRatingsLog] = useState([]);
     const [transferLogs, setTransferLogs] = useState([]);
     const [extensionLogs, setExtensionLogs] = useState([]);
-    const [userPerformance, setUserPerformance] = useState(null);
 
     // Reset page when filter/search changes
     useEffect(() => {
@@ -257,28 +263,22 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
     useEffect(() => {
         const fetchExtras = async () => {
             try {
-                // Fetch All Logs in parallel for speed
+                // Now fetching from Firebase via firebaseService
                 const [rLog, tLog, eLog] = await Promise.all([
-                    sheetsService.getRatings(),
-                    sheetsService.getTransferLogs(),
-                    sheetsService.getExtensionLogs()
+                    firebaseService.getRatings(),
+                    firebaseService.getTransferLogs(),
+                    firebaseService.getExtensionLogs()
                 ]);
 
                 setRatingsLog(rLog);
                 setTransferLogs(tLog);
                 setExtensionLogs(eLog);
-
-                // Fetch User Performance (User_Performance_Ratings)
-                if (user?.Username) {
-                    const stats = await sheetsService.getUserPerformance(user.Username, true);
-                    setUserPerformance(stats || null);
-                }
             } catch (e) {
-                console.error("Error fetching extra data", e);
+                console.error("Error fetching extra data from Firebase", e);
             }
         };
         fetchExtras();
-    }, [user]);
+    }, [user, lastSync]);
 
     // Update filter when initialFilter changes (from Dashboard click)
     useEffect(() => {
@@ -289,8 +289,8 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
     useEffect(() => {
         if (autoOpenTicket) {
             if (typeof autoOpenTicket === 'string') {
-                // Fetch full data for the ID
-                sheetsService.getComplaintById(autoOpenTicket, true, true)
+                // Fetch full data for the ID from Firebase
+                firebaseService.getComplaintById(autoOpenTicket)
                     .then(res => {
                         if (res) setSelectedComplaint(res);
                         setDetailModalOpen(true);
@@ -332,8 +332,8 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
 
     useEffect(() => {
         if (ticketIdParam) {
-            // Instant fetch for deep links
-            sheetsService.getComplaintById(ticketIdParam, true)
+            // Instant fetch for deep links from Firebase
+            firebaseService.getComplaintById(ticketIdParam)
                 .then(res => {
                     if (res) setSelectedComplaint(res);
                     setDetailModalOpen(true);
@@ -349,40 +349,62 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
     const loadComplaints = async (isRefetch = false) => {
         if (!isRefetch) setLoading(true);
         try {
-            const params = getBackendParams();
-            // Call Paginated API
-            const data = await sheetsService.getComplaintsPaginated(
-                params.page,
-                params.limit,
-                params.department,
-                params.status,
-                params.search,
-                params.reporter,
-                params.resolver,
-                user.Username, user.Role, user.Department,
-                isRefetch
-            );
-
-            // Handle Response Structure {items, total, page, totalPages}
-            if (data && Array.isArray(data.items)) {
-                setComplaints(data.items);
-                setTotalPages(data.totalPages || 1);
-                setTotalRecords(data.total || 0);
-            } else {
-                setComplaints([]);
-                setTotalRecords(0);
-            }
-        } catch (error) {
-            console.error("Failed to load complaints", error);
-            setComplaints([]);
+            // Now handled by IntelligenceContext's real-time sync mostly, 
+            // but for filtering/search we still use this local list logic
+            // We can actually just use allTickets from IntelligenceContext here!
         } finally {
             if (!isRefetch) setLoading(false);
         }
     };
 
+    // REFACTOR: Use IntelligenceContext for data source
+    const { allTickets } = useIntelligence();
+
     useEffect(() => {
-        loadComplaints();
-    }, [page, filter, debouncedSearchTerm, onlyMyComplaints, onlySolvedByMe]);
+        if (!allTickets) return;
+
+        let filtered = [...allTickets];
+
+        // 1. Role/Prop filtering
+        if (customReporter) filtered = filtered.filter(t => t.ReportedBy === customReporter);
+        else if (customResolver) filtered = filtered.filter(t => t.ResolvedBy === customResolver);
+        else if (onlyMyComplaints) filtered = filtered.filter(t => t.ReportedBy === user.Username);
+        else if (onlySolvedByMe) filtered = filtered.filter(t => t.ResolvedBy === user.Username);
+
+        // 2. Status filtering from UI
+        if (filter !== 'All') {
+            if (filter === 'Delayed') {
+                // Logic for delayed
+                const today = new Date();
+                filtered = filtered.filter(t => {
+                    const regDate = new Date(t.Date);
+                    return t.Status === 'Open' && regDate.toDateString() !== today.toDateString();
+                });
+            } else if (filter === 'Solved') {
+                // Inclusive filtering for anything that counts as "Done"
+                const doneStatuses = ['solved', 'resolved', 'closed', 'fixed', 'done'];
+                filtered = filtered.filter(t => doneStatuses.includes(String(t.Status).toLowerCase()));
+            } else {
+                filtered = filtered.filter(t => String(t.Status).toLowerCase() === String(filter).toLowerCase());
+            }
+        }
+
+        // 3. Search
+        if (debouncedSearchTerm) {
+            const s = debouncedSearchTerm.toLowerCase();
+            filtered = filtered.filter(t =>
+                String(t.ID).toLowerCase().includes(s) ||
+                String(t.Description).toLowerCase().includes(s) ||
+                String(t.Department).toLowerCase().includes(s) ||
+                String(t.ReportedBy).toLowerCase().includes(s)
+            );
+        }
+
+        setComplaints(filtered);
+        setTotalRecords(filtered.length);
+        setTotalPages(Math.ceil(filtered.length / pageSize));
+        setLoading(false);
+    }, [allTickets, filter, debouncedSearchTerm, onlyMyComplaints, onlySolvedByMe, user.Username]);
 
     // Live Sync Trigger
     useEffect(() => {
@@ -420,13 +442,28 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
     const handleModalConfirm = async (action, data) => {
         if (!selectedComplaint) return;
         const ticketId = selectedComplaint.ID;
+
         if (!ticketId) return alert("Error: Ticket ID is missing.");
 
         const previousComplaints = [...complaints];
         setIsSubmitting(true);
+
         try {
+            // 🟢 OPTIMISTIC UPDATE: Update local state immediately
+            setComplaints(prev => prev.map(c => {
+                if (c.ID === ticketId) {
+                    if (action === 'Resolve' || action === 'Close' || action === 'Force Close') {
+                        return { ...c, Status: action === 'Force Close' ? 'Force Close' : 'Resolved', ResolvedBy: user.Username, ResolvedDate: new Date().toISOString() };
+                    }
+                    if (action === 'Transfer') {
+                        return { ...c, Status: 'Transferred', Department: data.dept };
+                    }
+                }
+                return c;
+            }));
+
             if (action === 'Transfer') {
-                await sheetsService.transferComplaint(
+                await firebaseService.transferComplaint(
                     ticketId,
                     data.dept,
                     '',
@@ -434,49 +471,41 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                     user.Username
                 );
                 setSuccessMessage(`Ticket #${ticketId} successfully transferred to ${data.dept}.`);
-            } else if (action === 'Booster') {
-                await sheetsService.sendBoosterNotice(ticketId, user.Username, data.reason);
-                setSuccessMessage("Priority Booster Notice Sent Successfully!");
-            } else {
-                let newStatus = selectedComplaint.Status;
-                if (action === 'Resolve' || action === 'Close' || action === 'Rate' || action === 'Force Close') {
-                    newStatus = action === 'Force Close' ? 'Force Close' : 'Closed';
-                    if (action === 'Resolve') setSuccessMessage(`Ticket #${ticketId} marked as successfully resolved.`);
-                    if (action === 'Force Close') setSuccessMessage(`Ticket #${ticketId} force closed by admin.`);
-                }
-                if (action === 'Extend') {
-                    newStatus = 'Extend';
-                    setSuccessMessage(`Ticket #${ticketId} extended successfully. New date: ${data.date}`);
-                }
-                if (action === 'Re-open') {
-                    newStatus = 'Open';
-                    setSuccessMessage(`Ticket #${ticketId} re-opened successfully.`);
-                }
-                if (action === 'Rate') {
-                    setSuccessMessage(`Rating of ${data.rating}/5 submitted successfully.`);
-                }
-
-                await sheetsService.updateComplaintStatus(
+            } else if (action === 'Extend') {
+                await firebaseService.extendComplaint(ticketId, data.date, data.reason);
+                setSuccessMessage(`Ticket #${ticketId} extended successfully. New date: ${data.date}`);
+            } else if (action === 'Resolve' || action === 'Close' || action === 'Force Close') {
+                await firebaseService.updateComplaintStatus(
                     ticketId,
-                    action === 'Force Close' ? 'Closed' : newStatus,
-                    action === 'Force Close' ? 'AM Sir' : (action === 'Rate' ? (selectedComplaint.ResolvedBy || '') : user.Username),
-                    action === 'Force Close' ? 'Action: Force Closed' : (data.remark || data.reason || ''),
-                    data.date || '',
-                    data.rating || 0
+                    action === 'Force Close' ? 'Force Close' : 'Resolved',
+                    user.Username, // Correct: resolvedBy
+                    data.remark    // Correct: remark
                 );
+                if (action === 'Resolve') setSuccessMessage(`Ticket #${ticketId} marked as successfully resolved.`);
+                if (action === 'Force Close') setSuccessMessage(`Ticket #${ticketId} force closed by admin.`);
+            } else if (action === 'Rate') {
+                await firebaseService.rateComplaint(ticketId, data.rating, user.Username);
+                setSuccessMessage(`Rating of ${data.rating}/5 submitted successfully.`);
+            } else if (action === 'Booster') {
+                await firebaseService.sendBoosterNotice(ticketId, user.Username, data.reason);
+                setSuccessMessage("Priority Booster Notice Sent Successfully!");
+            } else if (action === 'Re-open') {
+                await firebaseService.updateComplaintStatus(ticketId, 'Open', data.remark, user.Username);
+                setSuccessMessage(`Ticket #${ticketId} re-opened successfully.`);
             }
 
-            const updatedList = await sheetsService.getComplaints(true, true);
-            setComplaints(updatedList);
+            // We don't need to manually fetch anymore because IntelligenceContext 
+            // has a real-time listener that will update allTickets
 
             setActionMode(null);
             setSelectedComplaint(null);
             setDetailModalOpen(false);
             setShowSuccess(true);
         } catch (error) {
-            console.error(error);
-            alert("Failed to perform action.");
+            console.error("Action error:", error);
+            // 🔴 ROLLBACK on error
             setComplaints(previousComplaints);
+            alert("Error: Operation failed. Please check your connection.");
         } finally {
             setIsSubmitting(false);
         }
@@ -602,7 +631,7 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                                         <th className="p-4 py-4 text-[10px] text-slate-400 w-32 uppercase tracking-widest font-black bg-[#f8faf9]">Dept Assigned</th>
                                         <th className="p-4 py-4 text-[10px] text-slate-400 w-32 uppercase tracking-widest font-black bg-[#f8faf9]">Medical Unit</th>
                                         <th className="p-4 py-4 text-[10px] text-slate-400 w-32 uppercase tracking-widest font-black bg-[#f8faf9]">Registered On</th>
-                                        <th className="p-4 py-4 text-[10px] text-slate-400 text-right w-24 uppercase tracking-widest font-black bg-[#f8faf9]">Service Unit</th>
+                                        <th className="p-4 py-4 text-[10px] text-slate-400 text-right w-24 uppercase tracking-widest font-black bg-[#f8faf9]">Ticket Status</th>
                                         <th className="p-4 py-4 w-10 bg-[#f8faf9]"></th>
                                     </tr>
                                 </thead>
@@ -979,7 +1008,7 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                                                 <button onClick={() => setActionMode('Transfer')} className="w-full py-4 bg-[#1f2d2a] text-[#2e7d32] font-black rounded-2xl border border-[#2e7d32]/10 hover:bg-black active:scale-[0.98] transition-all shadow-none uppercase text-[10px] tracking-widest">Transfer to Another Dept</button>
                                             </>
                                         )}
-                                    {String(selectedComplaint.Status).toLowerCase() === 'closed' && !selectedComplaint.Rating && !hasImmutableRating(selectedComplaint.ID) && String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase() && (
+                                    {['closed', 'resolved'].includes(String(selectedComplaint.Status).toLowerCase()) && !selectedComplaint.Rating && !hasImmutableRating(selectedComplaint.ID) && String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase() && (
                                         <button onClick={() => setActionMode('Rate')} className="flex-1 py-4 bg-[#2e7d32] text-white font-black rounded-2xl hover:bg-[#256628] transition-all shadow-none active:scale-[0.98] uppercase tracking-widest text-[10px]">Rate This Service</button>
                                     )}
                                     {String(selectedComplaint.Status).toLowerCase() === 'closed' && canReopen(selectedComplaint) && String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase() && (
