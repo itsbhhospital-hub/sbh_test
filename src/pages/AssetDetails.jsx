@@ -849,7 +849,7 @@ const AssetDetails = () => {
                             <div className={`p-4 rounded-2xl mb-4 ${selectedRecord.type === 'service' ? 'bg-emerald-50 text-[#2e7d32]' : 'bg-blue-50 text-blue-600'}`}>
                                 {selectedRecord.type === 'service' ? <Wrench size={32} /> : <Banknote size={32} />}
                             </div>
-                            <h2 className="text-xl font-black text-[#1f2d2a] uppercase tracking-tight">{selectedRecord.name} Details</h2>
+                            <h2 className="text-xl font-black text-[#1f2d2a] uppercase tracking-tight">{selectedRecord.name || selectedRecord.serviceType || 'Service Record'} Details</h2>
                             <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Asset ID: {asset.id}</p>
                         </div>
 
@@ -859,14 +859,14 @@ const AssetDetails = () => {
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Service Date</label>
                                     <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-sm text-slate-700">
-                                        {new Date(selectedRecord.date).toLocaleDateString('en-GB')}
+                                        {new Date(selectedRecord.serviceDate || selectedRecord.date).toLocaleDateString('en-GB')}
                                     </div>
                                 </div>
-                                {selectedRecord.nextDate && (
+                                {(selectedRecord.nextServiceDate || selectedRecord.nextDate) && (
                                     <div>
                                         <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest block mb-1">Next Due</label>
                                         <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 font-bold text-sm text-emerald-800">
-                                            {new Date(selectedRecord.nextDate).toLocaleDateString('en-GB')}
+                                            {new Date(selectedRecord.nextServiceDate || selectedRecord.nextDate).toLocaleDateString('en-GB')}
                                         </div>
                                     </div>
                                 )}
@@ -877,7 +877,7 @@ const AssetDetails = () => {
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Service Type</label>
                                     <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-sm text-slate-700">
-                                        {selectedRecord.name || 'N/A'}
+                                        {selectedRecord.serviceType || selectedRecord.name || 'N/A'}
                                     </div>
                                 </div>
                                 {selectedRecord.cost > 0 && (
@@ -894,7 +894,7 @@ const AssetDetails = () => {
                             <div>
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Remarks</label>
                                 <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 font-medium leading-relaxed min-h-[60px]">
-                                    {selectedRecord.details || 'No remarks provided.'}
+                                    {selectedRecord.remark || selectedRecord.details || 'No remarks provided.'}
                                 </div>
                             </div>
 
@@ -926,38 +926,43 @@ const AssetDetails = () => {
                             </div>
 
                             {/* SECTION: UPLOADED REPORT */}
-                            {selectedRecord.url && (
-                                <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Service Document</label>
-                                    <div className="border border-slate-200 rounded-2xl p-2 bg-slate-50 relative group overflow-hidden">
-                                        {/* Dynamic Image Preview if it's an image */}
-                                        {/\.(jpg|jpeg|png|webp|gif|svg)$/i.test(selectedRecord.url.split('?')[0]) ? (
-                                            <div className="w-full h-40 rounded-xl overflow-hidden mb-3 border border-slate-200 bg-white">
-                                                <img
-                                                    src={selectedRecord.url}
-                                                    alt="Report Preview"
-                                                    className="w-full h-full object-contain cursor-pointer transition-transform group-hover:scale-105"
-                                                    onClick={() => setPreviewFile({ open: true, url: selectedRecord.url, name: selectedRecord.name })}
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center py-6 bg-white rounded-xl border border-slate-200 mb-3">
-                                                <FileText size={32} className="text-slate-300 mb-2" />
-                                                <p className="text-[10px] font-black text-slate-400 uppercase">PDF / Digital Document</p>
-                                            </div>
-                                        )}
+                            {(selectedRecord.url || selectedRecord.serviceFile) && (() => {
+                                const fileUrl = selectedRecord.url || (selectedRecord.serviceFile ? (selectedRecord.serviceFile.startsWith('JVBERi') ? `data:application/pdf;base64,${selectedRecord.serviceFile}` : `data:image/jpeg;base64,${selectedRecord.serviceFile}`) : '');
+                                const isImage = fileUrl.startsWith('data:image') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(fileUrl.split('?')[0]);
 
-                                        <button
-                                            onClick={() => {
-                                                setPreviewFile({ open: true, url: selectedRecord.url, name: selectedRecord.name });
-                                            }}
-                                            className="w-full py-3 bg-[#1f2d2a] hover:bg-[#2e7d32] text-white rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all shadow-md active:scale-95"
-                                        >
-                                            <ExternalLink size={14} /> View Full Report
-                                        </button>
+                                return (
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Service Document</label>
+                                        <div className="border border-slate-200 rounded-2xl p-2 bg-slate-50 relative group overflow-hidden">
+                                            {/* Dynamic Image Preview if it's an image */}
+                                            {isImage ? (
+                                                <div className="w-full h-40 rounded-xl overflow-hidden mb-3 border border-slate-200 bg-white">
+                                                    <img
+                                                        src={fileUrl}
+                                                        alt="Report Preview"
+                                                        className="w-full h-full object-contain cursor-pointer transition-transform group-hover:scale-105"
+                                                        onClick={() => setPreviewFile({ open: true, url: fileUrl, name: selectedRecord.name || selectedRecord.serviceType || 'Service Record' })}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center py-6 bg-white rounded-xl border border-slate-200 mb-3">
+                                                    <FileText size={32} className="text-slate-300 mb-2" />
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase">PDF / Digital Document</p>
+                                                </div>
+                                            )}
+
+                                            <button
+                                                onClick={() => {
+                                                    setPreviewFile({ open: true, url: fileUrl, name: selectedRecord.name || selectedRecord.serviceType || 'Service Record' });
+                                                }}
+                                                className="w-full py-3 bg-[#1f2d2a] hover:bg-[#2e7d32] text-white rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all shadow-md active:scale-95"
+                                            >
+                                                <ExternalLink size={14} /> View Full Report
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             <button
                                 onClick={() => setSelectedRecord(null)}
