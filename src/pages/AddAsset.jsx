@@ -415,29 +415,63 @@ const AddAsset = () => {
                         {/* File Upload */}
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Documentation (Invoice / Report)</label>
-                            <div className="relative border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:bg-slate-50 hover:border-emerald-300 transition-all group cursor-pointer bg-slate-50/20">
-                                <input
-                                    type="file"
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    onChange={handleFileChange}
-                                    accept="application/pdf,image/*"
-                                />
-                                <div className="flex items-center justify-center gap-4">
-                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 ${fileName ? 'bg-emerald-500 text-white' : 'bg-white text-slate-400 shadow-sm border border-slate-100'}`}>
-                                        {fileName ? <CheckCircle size={18} /> : <UploadCloud size={18} />}
-                                    </div>
-                                    <div className="text-left">
-                                        {fileName ? (
-                                            <p className="text-sm font-black text-emerald-600">{fileName}</p>
-                                        ) : (
-                                            <>
-                                                <p className="text-sm font-bold text-slate-600">Upload purchase invoice or reports</p>
-                                                <p className="text-[10px] text-slate-400">PDF, JPG or PNG (Max 5MB)</p>
-                                            </>
-                                        )}
+
+                            {!fileName ? (
+                                <div className="relative border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:bg-slate-50 hover:border-emerald-300 transition-all group cursor-pointer bg-slate-50/20">
+                                    <input
+                                        type="file"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        onChange={handleFileChange}
+                                        accept="application/pdf,image/*"
+                                    />
+                                    <div className="flex items-center justify-center gap-4">
+                                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-white text-slate-400 shadow-sm border border-slate-100 transition-all duration-300">
+                                            <UploadCloud size={18} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-bold text-slate-600">Upload purchase invoice or reports</p>
+                                            <p className="text-[10px] text-slate-400">PDF, JPG or PNG (Max 5MB)</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="mt-4 relative group">
+                                    {formData.invoiceType?.startsWith('image/') ? (
+                                        <div className="relative border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                                            <img src={`data:${formData.invoiceType};base64,${formData.invoiceFile}`} alt="Preview" className="w-full h-auto max-h-48 object-contain bg-slate-50" />
+                                            <div className="absolute top-2 right-2 flex gap-2">
+                                                <a href={`data:${formData.invoiceType};base64,${formData.invoiceFile}`} download={fileName} className="bg-white/90 backdrop-blur text-emerald-700 p-2 rounded-xl shadow-sm hover:bg-emerald-50 transition-colors">
+                                                    <CheckCircle size={18} />
+                                                </a>
+                                                <button type="button" onClick={() => { setFileName(''); setFormData(prev => ({ ...prev, invoiceFile: null, invoiceName: '', invoiceType: '' })); }} className="bg-white/90 backdrop-blur text-rose-600 p-2 rounded-xl shadow-sm hover:bg-rose-50 transition-colors">
+                                                    <span className="font-bold text-xs">✕</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-between border border-slate-200 p-4 bg-slate-50 rounded-2xl shadow-sm">
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                                                    <CheckCircle size={20} />
+                                                </div>
+                                                <span className="text-sm font-bold text-slate-700 truncate">{fileName}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <a
+                                                    href={`data:${formData.invoiceType};base64,${formData.invoiceFile}`}
+                                                    download={fileName}
+                                                    className="text-xs font-black bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl hover:bg-slate-100 transition-colors"
+                                                >
+                                                    Download
+                                                </a>
+                                                <button type="button" onClick={() => { setFileName(''); setFormData(prev => ({ ...prev, invoiceFile: null, invoiceName: '', invoiceType: '' })); }} className="px-3 py-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-100 transition-colors">
+                                                    <span className="font-bold text-xs uppercase tracking-wider">Remove</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Remarks */}

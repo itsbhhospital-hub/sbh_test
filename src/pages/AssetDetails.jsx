@@ -1082,22 +1082,65 @@ const AssetDetails = () => {
 
                                 <div>
                                     <label className="text-xs font-black text-slate-500 uppercase tracking-widest block mb-1">Upload Service Report</label>
-                                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-50 relative">
-                                        <input
-                                            type="file"
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                            onChange={(e) => {
-                                                if (e.target.files[0]) {
-                                                    setServiceForm({ ...serviceForm, file: e.target.files[0], fileName: e.target.files[0].name });
-                                                }
-                                            }}
-                                        />
-                                        {serviceForm.fileName ? (
-                                            <span className="text-sm font-bold text-[#2e7d32] flex items-center justify-center gap-2"><CheckCircle size={16} /> {serviceForm.fileName}</span>
-                                        ) : (
-                                            <span className="text-sm text-slate-400 font-bold flex items-center justify-center gap-2"><UploadCloud size={16} /> Upload PDF</span>
-                                        )}
-                                    </div>
+
+                                    {!serviceForm.fileName ? (
+                                        <div className="relative border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:bg-slate-50 transition-colors">
+                                            <input
+                                                type="file"
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                onChange={(e) => {
+                                                    if (e.target.files[0]) {
+                                                        setServiceForm({ ...serviceForm, file: e.target.files[0], fileName: e.target.files[0].name });
+                                                    }
+                                                }}
+                                                accept="application/pdf,image/*"
+                                            />
+                                            <div className="flex flex-col items-center justify-center gap-2">
+                                                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-white text-slate-400 shadow-sm border border-slate-100">
+                                                    <UploadCloud size={18} />
+                                                </div>
+                                                <span className="text-sm text-slate-500 font-bold">Upload PDF or Image</span>
+                                                <span className="text-[10px] text-slate-400">Max 5MB</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-2 relative group">
+                                            {serviceForm.file?.type?.startsWith('image/') ? (
+                                                <div className="relative border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                                    <img src={URL.createObjectURL(serviceForm.file)} alt="Preview" className="w-full h-auto max-h-48 object-contain bg-slate-50" />
+                                                    <div className="absolute top-2 right-2 flex gap-2">
+                                                        <a href={URL.createObjectURL(serviceForm.file)} download={serviceForm.fileName} className="bg-white/90 backdrop-blur text-[#2e7d32] p-2 rounded-xl shadow-sm hover:bg-green-50 transition-colors">
+                                                            <CheckCircle size={18} />
+                                                        </a>
+                                                        <button type="button" onClick={() => setServiceForm({ ...serviceForm, file: null, fileName: '' })} className="bg-white/90 backdrop-blur text-rose-600 p-2 rounded-xl shadow-sm hover:bg-rose-50 transition-colors">
+                                                            <span className="font-bold text-xs">✕</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-between border border-slate-200 p-3 bg-slate-50 rounded-xl shadow-sm">
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className="w-8 h-8 bg-green-100 text-[#2e7d32] rounded-lg flex items-center justify-center shrink-0">
+                                                            <CheckCircle size={16} />
+                                                        </div>
+                                                        <span className="text-xs font-bold text-slate-700 truncate">{serviceForm.fileName}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <a
+                                                            href={URL.createObjectURL(serviceForm.file)}
+                                                            download={serviceForm.fileName}
+                                                            className="text-[10px] font-black bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                                        >
+                                                            Download
+                                                        </a>
+                                                        <button type="button" onClick={() => setServiceForm({ ...serviceForm, file: null, fileName: '' })} className="px-2 py-1.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg hover:bg-rose-100 transition-colors">
+                                                            <span className="font-bold text-[10px] uppercase tracking-wider">Remove</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex gap-3 pt-4">
