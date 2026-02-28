@@ -142,12 +142,23 @@ export const reminderService = {
                 }
 
                 if (message) {
-                    const contacts = await firebaseService.getDepartmentMobiles(dept);
-                    for (const contact of contacts) {
-                        const userRole = String(contact.Role || '').toUpperCase();
-                        // DIRECTOR only gets L1_DIRECTOR_ESCALATION
-                        if (alertType === 'L1_DIRECTOR_ESCALATION' || userRole !== 'DIRECTOR') {
-                            await firebaseService.sendWhatsApp(contact.mobile, contact.name, message);
+                    const ESCALATION_NUMBER = "9644404741"; // Use this single number for L1/L2 and Director as requested
+                    const DIRECTOR_NUMBER = "9644404741"; // Director specific number
+
+                    if (alertType === "L1_DIRECTOR_ESCALATION") {
+                        // SEND TO DIRECTOR ONLY
+                        await firebaseService.sendWhatsApp(DIRECTOR_NUMBER, "Director", message);
+                    } else if (alertType === "L2_ESCALATION" || alertType === "DELAY_ALERT") {
+                        // SEND TO L1/L2 NUMBER ONLY
+                        await firebaseService.sendWhatsApp(ESCALATION_NUMBER, "Escalation Manager", message);
+                    } else {
+                        // Fallback (if any other type gets added later)
+                        const contacts = await firebaseService.getDepartmentMobiles(dept);
+                        for (const contact of contacts) {
+                            const userRole = String(contact.Role || '').toUpperCase();
+                            if (userRole !== 'DIRECTOR') {
+                                await firebaseService.sendWhatsApp(contact.mobile, contact.name, message);
+                            }
                         }
                     }
 
