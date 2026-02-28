@@ -32,6 +32,7 @@ const AddAsset = () => {
         amcExpiry: '',
         vendorName: '',
         vendorContact: '',
+        vendorMobile: '', // Fixed missing initial state
         purchaseCost: '',
         responsiblePerson: '', // New
         responsibleMobile: ''  // New
