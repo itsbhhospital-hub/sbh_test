@@ -882,8 +882,19 @@ export const firebaseService = { // Primary Service Object
             // WhatsApp Notification
             try {
                 const footer = getFooter();
-                const message = `*🔧 ASSET SERVICE RECORD* 🏥\n\n🆔 *Asset ID:* ${assetId}\n🛠️ *Type:* ${record.type?.toUpperCase() || 'SERVICE'}\n\n📝 *Details:* ${record.details || 'N/A'}\n💰 *Cost:* ₹${record.cost || '0'}\n📅 *Date:* ${record.date || 'N/A'}\n🔧 *Next Service:* ${record.nextServiceDate || 'N/A'}${footer}`;
+                const alertType = record.serviceType || record.type || 'SERVICE';
+                const alertDetails = record.remark || record.details || 'N/A';
+                const alertCost = record.cost || '0';
+                const alertDate = record.serviceDate || record.date || new Date().toISOString().split('T')[0];
+                const alertNext = record.nextServiceDate || 'N/A';
+
+                const message = `*🔧 ASSET SERVICE RECORD* 🏥\n\n🆔 *Asset ID:* ${assetId}\n🛠️ *Type:* ${alertType.toUpperCase()}\n\n📝 *Details:* ${alertDetails}\n💰 *Cost:* ₹${alertCost}\n📅 *Date:* ${alertDate}\n🔧 *Next Service:* ${alertNext}${footer}`;
+
+                // Alert Admin + Also send to the responsible person if needed
                 sendWhatsApp("9644404741", "Admin", message);
+                if (record.responsibleMobile && record.responsibleMobile !== "9644404741") {
+                    sendWhatsApp(record.responsibleMobile, record.responsiblePerson || "Staff", message);
+                }
             } catch (e) { }
 
             return { status: 'success' };

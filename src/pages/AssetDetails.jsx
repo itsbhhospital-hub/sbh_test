@@ -231,6 +231,18 @@ const AssetDetails = () => {
         }
     };
 
+    const resetServiceForm = () => {
+        setServiceForm({
+            serviceDate: new Date().toISOString().split('T')[0],
+            nextServiceDate: '',
+            remark: '',
+            cost: '',
+            file: null,
+            fileName: '',
+            serviceType: 'Paid'
+        });
+    };
+
     const handleServiceSubmit = async (e) => {
         e.preventDefault();
         setSubmitting(true);
@@ -246,7 +258,8 @@ const AssetDetails = () => {
                     serviceVendor: serviceForm.serviceVendor || asset.vendorName,
                     location: serviceForm.location || asset.location,
                     department: serviceForm.department || asset.department,
-                    responsiblePerson: serviceForm.responsiblePerson || asset.responsiblePerson
+                    responsiblePerson: serviceForm.responsiblePerson || asset.responsiblePerson,
+                    responsibleMobile: serviceForm.responsibleMobile || asset.responsibleMobile
                 },
                 serviceForm.file,
                 serviceForm.fileName,
@@ -254,6 +267,7 @@ const AssetDetails = () => {
             );
             await fetchDetails();
             setShowServiceModal(false);
+            resetServiceForm(); // Clear the form so it is fresh the next time
             triggerSuccess("✔ Service Record Added");
         } catch (error) {
             console.error("Service record failed", error);
