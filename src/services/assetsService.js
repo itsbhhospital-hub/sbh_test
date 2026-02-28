@@ -96,18 +96,69 @@ export const assetsService = {
     },
 
     /**
-     * Helper to convert file to Base64
+     * Helper to convert file to Base64 (with compression for images)
      */
     fileToBase64: (file) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => {
-                const result = reader.result;
-                const base64 = result.includes(',') ? result.split(',')[1] : result;
-                resolve(base64);
-            };
-            reader.onerror = error => reject(error);
+
+            // Only compress images. DO NOT compress PDFs or other documents.
+            if (file.type.startsWith('image/')) {
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 1200;
+                        const MAX_HEIGHT = 1200;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Compress to JPEG at 70% quality (drastically reduces base64 size)
+                        let dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        if (dataUrl.length > 1000000) {
+                            // Drop quality slightly further if still huge
+                            dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                        }
+
+                        const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+                        resolve(base64);
+                    };
+                    img.onerror = (err) => reject(err);
+                };
+                reader.onerror = error => reject(error);
+            } else {
+                // PDF or other files - read as normal but restrict large files before upload
+                if (file.size > 700 * 1024) { // 700KB limit for PDFs since Base64 adds ~33% overhead
+                    reject(new Error("Document size too large. Please keep PDFs under 700KB to fit in database."));
+                    return;
+                }
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    const result = reader.result;
+                    const base64 = result.includes(',') ? result.split(',')[1] : result;
+                    resolve(base64);
+                };
+                reader.onerror = error => reject(error);
+            }
         });
     }
 };
