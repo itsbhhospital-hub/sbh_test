@@ -85,6 +85,8 @@ const AssetDetails = () => {
     const calculateAge = (dateString) => {
         const today = new Date();
         const birthDate = new Date(dateString);
+        if (isNaN(birthDate.getTime())) return 'Unknown';
+
         let years = today.getFullYear() - birthDate.getFullYear();
         let months = today.getMonth() - birthDate.getMonth();
         let days = today.getDate() - birthDate.getDate();
@@ -97,7 +99,7 @@ const AssetDetails = () => {
             years--;
             months += 12;
         }
-        return `${years} Years, ${months} Months`;
+        return `${years} Years, ${months} Months, ${days} Days`;
     };
 
     // --- SMART STATUS LOGIC (Matching Dashboard) ---
@@ -731,13 +733,22 @@ const AssetDetails = () => {
                                                     bgColor = "bg-emerald-50"; borderColor = "border-emerald-100"; titleColor = "text-[#1f2d2a]";
                                             }
 
+                                            const recordName = record.name || record.serviceType || 'Service Record';
+                                            const recordDetails = record.details || record.remark || '';
+
+                                            const getRecordDate = (d) => {
+                                                if (!d) return 'N/A';
+                                                if (d.toDate) return d.toDate().toLocaleDateString();
+                                                if (d.seconds) return new Date(d.seconds * 1000).toLocaleDateString();
+                                                return new Date(d).toLocaleDateString();
+                                            };
+
                                             return (
                                                 <div key={idx} className="relative pl-8 group">
                                                     <div className={`absolute -left-[9px] top-6 w-4 h-4 rounded-full bg-white border-4 ${record.type === 'alert' ? 'border-rose-500' : record.type === 'event' ? 'border-blue-500' : 'border-[#2e7d32]'} group-hover:scale-110 transition-transform`}></div>
                                                     <div
                                                         onClick={() => {
-                                                            // Only allow details for service type or if it has extra metadata
-                                                            if (record.type === 'service' || record.cost || record.nextDate) {
+                                                            if (record.type === 'service' || record.cost || record.nextDate || record.serviceType) {
                                                                 setSelectedRecord(record);
                                                             }
                                                         }}
@@ -746,25 +757,27 @@ const AssetDetails = () => {
                                                         <div className="flex justify-between items-start mb-2">
                                                             <div className="flex items-center gap-3">
                                                                 <div className={`p-2 rounded-lg bg-white/60 ${titleColor}`}>{icon}</div>
-                                                                <h4 className={`font-black text-sm uppercase tracking-wide ${titleColor}`}>{record.name}</h4>
+                                                                <h4 className={`font-black text-sm uppercase tracking-wide ${titleColor}`}>{recordName}</h4>
                                                             </div>
                                                             <div className="flex flex-col items-end gap-1">
-                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white/60 px-2 py-1 rounded-lg border border-slate-200/50">{new Date(record.date).toLocaleDateString()}</span>
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white/60 px-2 py-1 rounded-lg border border-slate-200/50">{getRecordDate(record.date)}</span>
                                                                 {record.cost > 0 && (
                                                                     <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100/50 px-2 py-0.5 rounded-md border border-emerald-100">₹{Number(record.cost).toLocaleString()}</span>
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        {record.details && (
-                                                            <p className="text-sm text-slate-600 mt-2 font-medium leading-relaxed line-clamp-2">{record.details}</p>
+                                                        {recordDetails && (
+                                                            <p className="text-sm text-slate-600 mt-2 font-medium leading-relaxed line-clamp-2">{recordDetails}</p>
                                                         )}
 
                                                         <div className="flex items-center justify-between mt-4">
-                                                            {record.url ? (
+                                                            {(record.url || record.serviceFile) ? (
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        setPreviewFile({ open: true, url: record.url, name: record.name });
+                                                                        // Depending on the structure backend saves it:
+                                                                        const fileUrl = record.url || (record.serviceFile ? `data:${record.serviceFileType || 'application/pdf'};base64,${record.serviceFile}` : '');
+                                                                        setPreviewFile({ open: true, url: fileUrl, name: recordName });
                                                                     }}
                                                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-wider text-[#2e7d32] hover:bg-emerald-50 transition-colors"
                                                                 >

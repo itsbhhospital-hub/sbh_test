@@ -1,5 +1,5 @@
-const admin = require("firebase-admin");
-const axios = require("axios");
+import admin from "firebase-admin";
+import axios from "axios";
 
 // 🔑 Load Service Account from Environment Variable (added to GitHub Secrets)
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);

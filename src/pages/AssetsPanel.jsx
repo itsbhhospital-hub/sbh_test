@@ -91,11 +91,24 @@ const StatusCard = ({ title, count, icon: Icon, colorClass, filterKey, activeFil
 const AssetCard = React.forwardRef(({ asset, onNavigate }, ref) => {
     const categories = getAssetCategory(asset);
     const status = getStatusUI(categories, asset.status);
-    const date = asset.createdDate || asset.createdAt || asset.Timestamp;
-    const formattedDate = date ? new Date(date).toLocaleString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-    }) : 'N/A';
+    const date = asset.createdDate || asset.createdAt || asset.Timestamp || asset.updatedAt;
+
+    const getFormattedDate = (dateVal) => {
+        if (!dateVal) return 'N/A';
+        let d;
+        if (dateVal.toDate) d = dateVal.toDate();
+        else if (dateVal.seconds) d = new Date(dateVal.seconds * 1000);
+        else d = new Date(dateVal);
+
+        if (isNaN(d.getTime())) return 'N/A';
+
+        return d.toLocaleString('en-GB', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    };
+
+    const formattedDate = getFormattedDate(date);
 
     return (
         <motion.div

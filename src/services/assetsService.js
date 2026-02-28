@@ -81,6 +81,9 @@ export const assetsService = {
             responsibleMobile: data.responsibleMobile
         };
 
+        // Remove undefined fields to prevent Firestore errors
+        Object.keys(record).forEach(key => record[key] === undefined && delete record[key]);
+
         return firebaseService.addServiceRecord(data.id, record);
     },
 
