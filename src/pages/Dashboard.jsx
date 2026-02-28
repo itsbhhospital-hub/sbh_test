@@ -310,11 +310,11 @@ const Dashboard = () => {
     const handleCardClick = (type, subFilter = null) => {
         if (type === 'Active Staff') {
             setShowActiveStaffModal(true);
-        } else {
-            setPopupCategory(type);
-            setPopupSubFilter(subFilter);
-            setPopupOpen(true);
+            return;
         }
+        setPopupCategory(type);
+        setPopupSubFilter(subFilter);
+        setPopupOpen(true);
     };
 
     const StatCard = ({ icon: Icon, title, value, colorClass, bgClass, filterType }) => (
@@ -596,7 +596,7 @@ const Dashboard = () => {
 
                             {/* Dynamic Slot */}
                             {isUserAdmin ? (
-                                <StatCard icon={Users} title="Staff Active" value={activeUsers ? activeUsers.filter(u => String(u.Status).toLowerCase() === 'active').length : 0} bgClass="bg-slate-100" colorClass="text-slate-700" filterType="Active Staff" />
+                                <StatCard icon={Users} title="Staff Active" value={activeUsers ? activeUsers.filter(u => normalize(String(u.Status)) === 'active').length : 0} bgClass="bg-slate-100" colorClass="text-slate-700" filterType="Active Staff" />
                             ) : (
                                 <StatCard icon={History} title="Extended" value={dashboardStats.extended} bgClass="bg-blue-50" colorClass="text-blue-600" filterType="Extended" />
                             )}

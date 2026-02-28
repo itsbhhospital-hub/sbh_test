@@ -15,6 +15,28 @@ const AssetFinancialAnalytics = ({ assets }) => {
         const currentMonth = today.getMonth();
         const currentYear = today.getFullYear();
 
+        const parseDate = (d) => {
+            if (!d) return null;
+            const parsed = new Date(d);
+            return isNaN(parsed.getTime()) ? null : parsed;
+        };
+
+        const findField = (assetObj, prefixes) => {
+            if (!assetObj) return null;
+            const keys = Object.keys(assetObj);
+            for (const p of prefixes) {
+                const found = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === p.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                if (found) return assetObj[found];
+            }
+            return null;
+        };
+
+        const isAmcActive = (a) => {
+            const status = String(a.amcTaken || '').toLowerCase().trim();
+            const amcExp = findField(a, ['amcExpiry', 'amcExpiryDate', 'amcDate', 'expiryDate']);
+            return status === 'yes' || (status !== 'no' && !!parseDate(amcExp));
+        };
+
         // 1. Financials
         const totalAssetValue = assets.reduce((sum, a) => sum + (Number(a.purchaseCost) || 0), 0);
         const totalServiceSpend = assets.reduce((sum, a) => sum + (Number(a.totalServiceCost) || 0), 0);
@@ -22,10 +44,15 @@ const AssetFinancialAnalytics = ({ assets }) => {
 
         // 2. Risk Analysis
         const risks = assets.filter(a => {
-            const isAmcExpired = a.amcTaken === 'Yes' && a.amcExpiry && new Date(a.amcExpiry) < today;
-            const isWarrantyExpired = a.warrantyExpiry && new Date(a.warrantyExpiry) < today;
-            const isServiceOverdue = a.nextServiceDate && new Date(a.nextServiceDate) < today;
-            return (a.amcTaken === 'Yes' && isAmcExpired) || (!a.amcTaken && isWarrantyExpired) || isServiceOverdue;
+            const amcExp = parseDate(findField(a, ['amcExpiry', 'amcExpiryDate', 'amcDate', 'expiryDate']));
+            const wtyExp = parseDate(findField(a, ['warrantyExpiry', 'warrantyDate']));
+            const svcDue = parseDate(findField(a, ['nextServiceDate', 'nextService', 'serviceDue']));
+
+            const isAmcExpired = isAmcActive(a) && amcExp && amcExp < today;
+            const isWarrantyExpired = wtyExp && wtyExp < today;
+            const isServiceOverdue = svcDue && svcDue < today;
+
+            return (isAmcActive(a) && isAmcExpired) || (!isAmcActive(a) && isWarrantyExpired) || isServiceOverdue;
         });
         const riskScore = assets.length > 0 ? Math.round((risks.length / assets.length) * 100) : 0;
 
@@ -35,8 +62,9 @@ const AssetFinancialAnalytics = ({ assets }) => {
             const date = new Date(currentYear, currentMonth + i, 1);
             const monthName = date.toLocaleString('default', { month: 'short' });
             const count = assets.filter(a => {
-                if (!a.nextServiceDate) return false;
-                const d = new Date(a.nextServiceDate);
+                const svcDue = findField(a, ['nextServiceDate', 'nextService', 'serviceDue']);
+                const d = parseDate(svcDue);
+                if (!d) return false;
                 return d.getMonth() === date.getMonth() && d.getFullYear() === date.getFullYear();
             }).length;
             serviceForecast.push({ name: monthName, count });
@@ -62,8 +90,9 @@ const AssetFinancialAnalytics = ({ assets }) => {
             const date = new Date(currentYear, currentMonth + i, 1);
             const monthName = date.toLocaleString('default', { month: 'short' });
             const count = assets.filter(a => {
-                if (a.amcTaken !== 'Yes' || !a.amcExpiry) return false;
-                const d = new Date(a.amcExpiry);
+                const amcExp = findField(a, ['amcExpiry', 'amcExpiryDate', 'amcDate', 'expiryDate']);
+                const d = parseDate(amcExp);
+                if (!isAmcActive(a) || !d) return false;
                 return d.getMonth() === date.getMonth() && d.getFullYear() === date.getFullYear();
             }).length;
             amcForecast.push({ name: monthName, expiring: count });
