@@ -464,12 +464,14 @@ export const IntelligenceProvider = ({ children }) => {
         if (!user || isRefreshing) return;
         setIsRefreshing(true);
         try {
-            const isSuperAdmin = ['super_admin', 'superadmin'].includes(normalize(user.Role)) || normalize(user.Username) === 'amsir' || user.Username === 'AM Sir';
-            const isAdmin = ['admin', 'super_admin', 'superadmin'].includes(normalize(user.Role)) || isSuperAdmin;
+            const role = String(user?.Role || '').toLowerCase();
+            const username = String(user?.Username || '').toLowerCase().trim();
+            const isSuperAdmin = ['super_admin', 'superadmin'].includes(role) || username === 'amsir' || username === 'am sir';
+            const isAdmin = ['admin'].includes(role) || isSuperAdmin;
 
             const [statsData, fetchedUsers, fetchedAssets] = await Promise.all([
                 firebaseService.getDashboardStats(user.Username, user.Department, user.Role),
-                (isAdmin || isSuperAdmin) ? firebaseService.getUsers() : Promise.resolve([]),
+                isAdmin ? firebaseService.getUsers() : Promise.resolve([]),
                 assetsService.getAssets().catch(() => [])
             ]);
 
@@ -527,9 +529,11 @@ export const IntelligenceProvider = ({ children }) => {
         const unSubAssets = firebaseService.subscribeToAssets(setAssets);
 
         const unSubUsers = firebaseService.subscribeToCollection('users', (data) => {
-            const isSuperAdmin = ['super_admin', 'superadmin'].includes(normalize(user.Role)) || normalize(user.Username) === 'amsir' || user.Username === 'AM Sir';
-            const isAdmin = ['admin'].includes(normalize(user.Role)) || isSuperAdmin;
-            setUsers((isAdmin || isSuperAdmin) ? data : []);
+            const role = String(user?.Role || '').toLowerCase();
+            const username = String(user?.Username || '').toLowerCase().trim();
+            const isSuperAdmin = ['super_admin', 'superadmin'].includes(role) || username === 'amsir' || username === 'am sir';
+            const isAdmin = ['admin'].includes(role) || isSuperAdmin;
+            setUsers(isAdmin ? data : []);
         });
 
         return () => {

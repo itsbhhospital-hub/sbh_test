@@ -5,8 +5,8 @@ const FilePreviewModal = ({ isOpen, onClose, fileUrl, fileName }) => {
     if (!isOpen || !fileUrl) return null;
 
     // Detect file type from URL or name
-    const isPDF = fileUrl.toLowerCase().includes('.pdf') || fileUrl.includes('drive.google.com') && !fileUrl.includes('view?usp=sharing');
-    const isImage = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(fileUrl.split('?')[0]);
+    const isPDF = fileUrl.toLowerCase().includes('.pdf') || (fileUrl.includes('drive.google.com') && !fileUrl.includes('view?usp=sharing'));
+    const isImage = /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(fileUrl.split('?')[0]) || fileUrl.startsWith('data:image/');
 
     // Transform Google Drive links for embedding if needed
     const getEmbedUrl = (url) => {
