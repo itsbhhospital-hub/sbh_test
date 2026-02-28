@@ -464,9 +464,9 @@ export const IntelligenceProvider = ({ children }) => {
         if (!user || isRefreshing) return;
         setIsRefreshing(true);
         try {
-            const role = String(user?.Role || '').toLowerCase();
-            const username = String(user?.Username || '').toLowerCase().trim();
-            const isSuperAdmin = ['super_admin', 'superadmin'].includes(role) || username === 'amsir' || username === 'am sir';
+            const role = normalize(user?.Role);
+            const username = normalize(user?.Username);
+            const isSuperAdmin = ['superadmin'].includes(role) || username === 'amsir';
             const isAdmin = ['admin'].includes(role) || isSuperAdmin;
 
             const [statsData, fetchedUsers, fetchedAssets] = await Promise.all([
@@ -529,9 +529,9 @@ export const IntelligenceProvider = ({ children }) => {
         const unSubAssets = firebaseService.subscribeToAssets(setAssets);
 
         const unSubUsers = firebaseService.subscribeToCollection('users', (data) => {
-            const role = String(user?.Role || '').toLowerCase();
-            const username = String(user?.Username || '').toLowerCase().trim();
-            const isSuperAdmin = ['super_admin', 'superadmin'].includes(role) || username === 'amsir' || username === 'am sir';
+            const role = normalize(user?.Role);
+            const username = normalize(user?.Username);
+            const isSuperAdmin = ['superadmin'].includes(role) || username === 'amsir';
             const isAdmin = ['admin'].includes(role) || isSuperAdmin;
             setUsers(isAdmin ? data : []);
         });
