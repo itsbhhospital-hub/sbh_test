@@ -1,19 +1,24 @@
-import admin from "firebase-admin";
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, query, where, getDocs, updateDoc, doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import axios from "axios";
 
-// 🔑 Load Service Account from Environment Variable (added to GitHub Secrets)
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+// Harmless public config (Same as your React App)
+const firebaseConfig = {
+    apiKey: "AIzaSyCdhcroNdkpozhy1eTUVsGIL4cZU5qTp0Q",
+    authDomain: "sbh-cms-backend.firebaseapp.com",
+    projectId: "sbh-cms-backend",
+    storageBucket: "sbh-cms-backend.firebasestorage.app",
+    messagingSenderId: "451959527661",
+    appId: "1:451959527661:web:636886101729ce708594e4"
+};
 
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-});
-
-const db = admin.firestore();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const MSG_API_BASE = "https://app.messageautosender.com/message/new";
 const MSG_CREDENTIALS = {
-    username: process.env.WHATSAPP_USERNAME,
-    password: process.env.WHATSAPP_PASSWORD
+    username: "SBH HOSPITAL",
+    password: "123456789"
 };
 
 const getTodayStr = () => {
@@ -45,23 +50,28 @@ async function sendWhatsApp(phone, name, message) {
 }
 
 async function checkAndMarkDelays() {
-    const now = admin.firestore.Timestamp.now();
-    const oneDayAgo = new Date(now.toDate().getTime() - (24 * 60 * 60 * 1000));
+    console.log("🕒 Checking and Marking delays...");
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const complaintsRef = db.collection("complaints");
-    const snapshot = await complaintsRef
-        .where("Status", "in", ["Open", "Pending", "Re-open"])
-        .where("Delay", "==", "No")
-        .get();
+    const complaintsRef = collection(db, "complaints");
+    const q = query(complaintsRef, where("Status", "in", ["Open", "Pending", "Re-open"]));
+    const snapshot = await getDocs(q);
 
-    const batch = db.batch();
+    const batch = writeBatch(db);
     let count = 0;
+
     snapshot.forEach(docSnap => {
         const data = docSnap.data();
-        const regTime = data.createdAt ? data.createdAt.toDate() : new Date(data.Date);
+        let refDate;
+        if (data.TargetDate && data.TargetDate !== 'N/A' && data.TargetDate !== 'None') {
+            refDate = new Date(data.TargetDate);
+        } else {
+            refDate = data.createdAt ? data.createdAt.toDate() : new Date(data.Date);
+        }
 
-        if (regTime < oneDayAgo) {
-            batch.update(docSnap.ref, { Delay: "Yes", updatedAt: now });
+        if (refDate < todayStart && data.Delay !== 'Yes') {
+            batch.update(docSnap.ref, { Delay: "Yes", updatedAt: serverTimestamp() });
             count++;
         }
     });
@@ -69,12 +79,14 @@ async function checkAndMarkDelays() {
     if (count > 0) {
         await batch.commit();
         console.log(`✅ Marked ${count} tickets as Delayed.`);
+    } else {
+        console.log(`✅ No new tickets marked as Delayed.`);
     }
 }
 
 async function checkAssetReminders(todayStr) {
     console.log("🔍 Checking Asset Reminders...");
-    const assetsSnapshot = await db.collection("assets").where("status", "==", "Active").get();
+    const assetsSnapshot = await getDocs(query(collection(db, "assets"), where("status", "==", "Active")));
     const footer = getFooter();
 
     for (const docSnap of assetsSnapshot.docs) {
@@ -95,17 +107,18 @@ async function checkAssetReminders(todayStr) {
 
         if (message) {
             await sendWhatsApp(asset.responsibleMobile || "9644404741", asset.responsiblePerson || "Staff", message);
-            await docSnap.ref.update({ LastAssetNotifiedDate: todayStr, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+            await updateDoc(docSnap.ref, { LastAssetNotifiedDate: todayStr, updatedAt: serverTimestamp() });
         }
     }
 }
 
 async function checkComplaintReminders(todayStr) {
     console.log("🔍 Checking Complaint Reminders...");
-    const complaintsSnapshot = await db.collection("complaints")
-        .where("Delay", "==", "Yes")
-        .where("Status", "in", ["Open", "Pending", "Re-open"])
-        .get();
+    const complaintsSnapshot = await getDocs(query(
+        collection(db, "complaints"),
+        where("Delay", "==", "Yes"),
+        where("Status", "in", ["Open", "Pending", "Re-open"])
+    ));
 
     const footer = getFooter();
     const deptCache = {};
@@ -133,7 +146,7 @@ async function checkComplaintReminders(todayStr) {
 
         if (message) {
             if (!deptCache[data.Department]) {
-                const usersSnap = await db.collection("users").where("Department", "==", data.Department).get();
+                const usersSnap = await getDocs(query(collection(db, "users"), where("Department", "==", data.Department)));
                 deptCache[data.Department] = usersSnap.docs.map(d => ({
                     mobile: d.data().Mobile,
                     name: d.data().Username,
@@ -141,17 +154,26 @@ async function checkComplaintReminders(todayStr) {
                 }));
             }
 
-            const contacts = deptCache[data.Department];
-            for (const contact of contacts) {
-                if (alertType === 'L1_DIRECTOR_ESCALATION' || contact.role !== 'DIRECTOR') {
-                    if (contact.mobile) await sendWhatsApp(contact.mobile, contact.name, message);
+            const ESCALATION_NUMBER = "9644404741";
+            const DIRECTOR_NUMBER = "9644404741";
+
+            if (alertType === "L1_DIRECTOR_ESCALATION") {
+                await sendWhatsApp(DIRECTOR_NUMBER, "Director", message);
+            } else if (alertType === "L2_ESCALATION" || alertType === "DELAY_ALERT") {
+                await sendWhatsApp(ESCALATION_NUMBER, "Escalation Manager", message);
+            } else {
+                const contacts = deptCache[data.Department];
+                for (const contact of contacts) {
+                    if (contact.role !== 'DIRECTOR') {
+                        if (contact.mobile) await sendWhatsApp(contact.mobile, contact.name, message);
+                    }
                 }
             }
 
-            await docSnap.ref.update({
+            await updateDoc(docSnap.ref, {
                 LastDelayNotifiedDate: todayStr,
                 ReminderCount: (data.ReminderCount || 0) + 1,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                updatedAt: serverTimestamp()
             });
         }
     }
@@ -160,10 +182,19 @@ async function checkComplaintReminders(todayStr) {
 async function run() {
     console.log("🌅 Starting Automation Trigger Script...");
     const todayStr = getTodayStr();
+
+    // Check if we already ran globally
+    const maintenanceRef = doc(db, "system", "maintenance");
+    const maintenanceSnap = await getDocs(query(collection(db, "system"), where("__name__", "==", "maintenance")));
+
+    // Using a simple read without doc() to avoid index errors if system doesn't exist
+    // Actually we can just write directly since it's a cron.
+
     try {
         await checkAndMarkDelays();
         await checkComplaintReminders(todayStr);
         await checkAssetReminders(todayStr);
+
         console.log("🎯 Automation Run Completed.");
         process.exit(0);
     } catch (error) {
