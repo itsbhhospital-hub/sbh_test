@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Users, Search, Circle } from 'lucide-react';
-import { sheetsService } from '../services/googleSheets';
+import { firebaseService } from '../services/firebaseService';
 
 const ActiveUsersModal = ({ isOpen, onClose }) => {
     const [users, setUsers] = useState([]);
@@ -16,7 +16,7 @@ const ActiveUsersModal = ({ isOpen, onClose }) => {
     const loadActiveUsers = async () => {
         setLoading(true);
         try {
-            const data = await sheetsService.getUsers();
+            const data = await firebaseService.getUsers();
             // Filter for Active users
             const active = data.filter(u => u.Status === 'Active');
             setUsers(active);

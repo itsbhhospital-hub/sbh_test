@@ -125,6 +125,8 @@ export const IntelligenceProvider = ({ children }) => {
         const initStaff = (username) => {
             const nName = normalize(username);
             if (!nName) return null;
+            // Block invalid historical usernames
+            if (['solved', 'resolved', 'closed', 'forceclose', 'transferred', 'na', 'none'].includes(nName)) return null;
             if (!staffMap[nName]) {
                 const userObj = userMap.get(nName);
                 staffMap[nName] = {
@@ -186,13 +188,15 @@ export const IntelligenceProvider = ({ children }) => {
             const date = parseDateSafe(t.Date || t.Timestamp);
             const regTime = date ? date.getTime() : 0;
 
-            const isSolved = ['solved', 'closed', 'resolved', 'force close', 'done', 'fixed'].includes(status);
+            const isSolved = ['solved', 'closed', 'resolved', 'force close', 'forceclose', 'done', 'fixed'].includes(status);
             const isActive = !isSolved;
             const resolver = normalize(t.ResolvedBy);
 
-            const isDelayed = normalize(t.Delay) === 'yes' ||
+            const isDelayed = isActive && (
+                normalize(t.Delay) === 'yes' ||
                 status === 'delayed' ||
-                (isActive && regTime > 0 && regTime < startOfDay.getTime());
+                (regTime > 0 && regTime < startOfDay.getTime())
+            );
 
             if (!depts[dept]) depts[dept] = { open: 0, solved: 0, pending: 0, delayed: 0, extended: 0, transfers: 0 };
 
@@ -215,7 +219,6 @@ export const IntelligenceProvider = ({ children }) => {
                     globalFlow.pending++;
                     if (isSuperAdmin || isMe) personalFlow.pending++;
                 }
-                else if (status === 'transferred') { depts[dept].transfers++; globalFlow.transferred++; if (isSuperAdmin || isMe) personalFlow.transferred++; }
 
                 const hasTargetDate = t.TargetDate && String(t.TargetDate).trim() !== '' && String(t.TargetDate).toLowerCase() !== 'none';
                 if (status === 'extended' || status === 'extend' || hasTargetDate) {
@@ -259,6 +262,14 @@ export const IntelligenceProvider = ({ children }) => {
                         }
                     }
                 }
+            }
+
+            // Historical Transfer Check (Regardless of active/solved)
+            const hasEverTransferred = t.TransferDate || t.TransferredBy || t.LatestTransfer || status === 'transferred';
+            if (hasEverTransferred) {
+                depts[dept].transfers++;
+                globalFlow.transferred++;
+                if (isSuperAdmin || isMe) personalFlow.transferred++;
             }
         }
 
@@ -534,7 +545,7 @@ export const IntelligenceProvider = ({ children }) => {
             const isSuperAdmin = ['superadmin'].includes(role) || username === 'amsir';
             const isAdmin = ['admin'].includes(role) || isSuperAdmin;
             setUsers(isAdmin ? data : []);
-        });
+        }, null); // Pass null to avoid sorting by createdAt which fails on older migrated users
 
         return () => {
             unsubscribe();

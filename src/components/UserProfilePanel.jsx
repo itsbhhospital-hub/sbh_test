@@ -19,8 +19,8 @@ const UserProfilePanel = ({ user: targetUser, onClose, onUpdate, onDelete }) => 
         Mobile: '',
         Role: '',
         Password: '',
-        LastLogin: new Date().toISOString(),
-        IPDetails: '192.168.1.1',
+        LastLogin: 'Never Logged In',
+        IPDetails: 'Unknown IP',
         ProfilePhoto: null,
         OldUsername: '',
         Permissions: {
@@ -51,8 +51,8 @@ const UserProfilePanel = ({ user: targetUser, onClose, onUpdate, onDelete }) => 
                 Mobile: targetUser.Mobile || '',
                 Role: targetUser.Role || '',
                 Password: targetUser.Password || '',
-                LastLogin: targetUser.LastLogin || new Date().toISOString(),
-                IPDetails: targetUser.IPDetails || '192.168.1.1',
+                LastLogin: targetUser.LastLogin || 'Never Logged In',
+                IPDetails: targetUser.IPDetails || 'Unknown IP',
                 ProfilePhoto: targetUser.ProfilePhoto || null,
                 OldUsername: targetUser.Username, // Track original
                 Permissions: targetUser.Permissions || { cmsAccess: true, assetsAccess: true }
@@ -101,7 +101,8 @@ const UserProfilePanel = ({ user: targetUser, onClose, onUpdate, onDelete }) => 
 
             // 2. Commit All Changes (including new Photo URL)
             setLoading(true); // START LOADER ONLY FOR FINAL DATA COMMIT
-            const updatedData = { ...formData, ProfilePhoto: finalPhotoUrl };
+            const { LastLogin, IPDetails, ...updatePayload } = formData;
+            const updatedData = { ...updatePayload, ProfilePhoto: finalPhotoUrl };
             await onUpdate(updatedData);
 
             setSuccessMsg("Profile updated successfully");
@@ -422,7 +423,10 @@ const UserProfilePanel = ({ user: targetUser, onClose, onUpdate, onDelete }) => 
                                     <div className="space-y-1">
                                         <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">Registry Sync</p>
                                         <p className="text-[11px] font-black text-[#1f2d2a] truncate uppercase">
-                                            {new Date(formData.LastLogin).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            {(formData.LastLogin === 'Never Logged In' || !formData.LastLogin)
+                                                ? 'Never Logged In'
+                                                : new Date(formData.LastLogin).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                            }
                                         </p>
                                     </div>
                                     <div className="text-right space-y-1">

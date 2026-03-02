@@ -5,7 +5,7 @@ import axios from 'axios';
 // 1. Go to Google Apps Script -> Deploy -> Manage Deployments
 // 2. Copy the 'Web App URL'
 // 3. Paste it below:
-const API_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+const API_URL = 'https://script.google.com/macros/s/AKfycbyf24Xn3B9h3-H7jJgG2S18I4m7d806z5C0O9V4k-T8Qo6LIs35gLgW-P1K-lEw3wKxYQ/exec';
 
 // --- MOCK DATA FALLBACK ---
 const MOCK_USERS = [
@@ -497,7 +497,8 @@ export const sheetsService = {
             // 2. Send to Backend
             return sendToSheet('updateUserIP', { username, ip }, true); // Silent update
         } catch (e) {
-            console.warn("IP Tracking failed:", e);
+            console.error("🚨 IP Tracking failed:", e);
+            if (e.response) console.error("Response:", e.response.data);
             // Fallback: Send 'Unknown' or retry logic if needed, but don't block user
         }
     },

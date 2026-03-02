@@ -49,7 +49,15 @@ const Signup = () => {
                 return;
             }
 
-            await signup(formData);
+            await signup({
+                Username: formData.username,
+                Password: formData.password,
+                Department: formData.department,
+                Mobile: formData.mobile,
+                Status: 'Inactive',
+                Role: 'user',
+                Permissions: { cmsAccess: true, assetsAccess: true }
+            });
             setShowModal(true);
             setFormData({ username: '', password: '', department: '', mobile: '' });
         } catch (err) {
@@ -122,8 +130,9 @@ const Signup = () => {
                                             className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-[#e2e8f0] rounded-xl outline-none focus:bg-white focus:border-[#10b981] focus:ring-4 focus:ring-emerald-500/5 transition-all text-slate-700 font-semibold placeholder:text-slate-300 shadow-none"
                                             value={formData.password}
                                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                            placeholder="Set password"
+                                            placeholder="Set password (min 6 chars)"
                                             required
+                                            minLength="6"
                                         />
                                     </div>
                                 </div>

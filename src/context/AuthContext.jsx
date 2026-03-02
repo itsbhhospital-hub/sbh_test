@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import { useLoading } from './LoadingContext';
 import { sheetsService, getGoogleDriveDirectLink } from '../services/googleSheets';
 import { firebaseService } from '../services/firebaseService';
 import { normalize } from '../utils/dataUtils';
+import axios from 'axios';
 
-const AuthContext = React.createContext(null);
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = React.useState(null);
-    const [loading, setLoading] = React.useState(true);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
     const { showLoader, hideLoader } = useLoading();
 
     React.useEffect(() => {
@@ -93,12 +94,21 @@ export const AuthProvider = ({ children }) => {
                 Permissions: foundUser.Permissions || { cmsAccess: true, assetsAccess: true } // Ensure defaults
             };
 
+            // MASTER PROFILE UPGRADE: Log IP Visit BEFORE redirecting (Firebase Primary Sync)
+            try {
+                // 1. Fetch IP globally for the session
+                const ipRes = await axios.get('https://api.ipify.org?format=json').catch(() => ({ data: { ip: 'Unknown IP' } }));
+                const ip = ipRes.data.ip;
+
+                // 2. Log to Firebase (Primary Backend)
+                await firebaseService.logUserVisit(userSession.Username, ip);
+            } catch (err) {
+                console.warn("Visit log failed", err);
+            }
+
             setUser(userSession);
             localStorage.setItem('sbh_user', JSON.stringify(userSession));
             localStorage.setItem('sbh_login_time', Date.now().toString());
-
-            // MASTER PROFILE UPGRADE: Log IP Visit (Fire & Forget)
-            sheetsService.logUserVisit(userSession.Username).catch(err => console.warn("Visit log failed", err));
 
             return userSession;
         } catch (error) {

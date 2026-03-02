@@ -34,9 +34,9 @@ const TicketJourneyModal = ({ isOpen, onClose, ticket, transferLogs = [], extens
                 title: 'Department Transferred',
                 subtitle: (
                     <div className="flex flex-col gap-1 mt-0.5">
-                        <span className="font-bold text-slate-700">From {t.FromDepartment || t.FromDept} to {t.NewDepartment || t.ToDept}</span>
+                        <span className="font-bold text-slate-700">From {t.FromDepartment || 'Unknown'} to {t.ToDepartment || t.NewDepartment || 'Unknown'}</span>
                         <div className="flex flex-col text-[10px] text-slate-500">
-                            <span>By: <span className="font-bold text-slate-600">{t.TransferredBy}</span></span>
+                            <span>By: <span className="font-bold text-slate-600">{t.TransferredBy || 'System'}</span></span>
                             {t.Reason && <span className="italic mt-0.5">"Remark: {t.Reason}"</span>}
                         </div>
                     </div>

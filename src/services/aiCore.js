@@ -28,7 +28,7 @@ const getHoursDiff = (date1, date2) => {
 export const predictDelayRisk = (ticket, deptStats) => {
     // 1. Basic Delay Check
     const status = normalize(ticket.Status);
-    const isClosed = ['solved', 'closed', 'resolved', 'force close'].includes(status);
+    const isClosed = ['solved', 'closed', 'resolved', 'force close', 'forceclose', 'fixed', 'done'].includes(status);
     if (isClosed) return { risk: 0, reason: 'Solved' };
 
     const now = new Date();
@@ -83,8 +83,9 @@ export const predictDelayRisk = (ticket, deptStats) => {
 // --- MODULE 3: WORKLOAD HEATMAP ---
 export const calculateWorkloadParams = (tickets, dept) => {
     const deptTickets = tickets.filter(t => normalize(t.Department) === normalize(dept));
-    const open = deptTickets.filter(t => !['closed', 'solved', 'resolved', 'force close'].includes(normalize(t.Status))).length;
-    const delayed = deptTickets.filter(t => normalize(t.Status) === 'delayed' || normalize(t.Delay) === 'yes').length;
+    const closedStatuses = ['closed', 'solved', 'resolved', 'force close', 'forceclose', 'fixed', 'done'];
+    const open = deptTickets.filter(t => !closedStatuses.includes(normalize(t.Status))).length;
+    const delayed = deptTickets.filter(t => !closedStatuses.includes(normalize(t.Status)) && (normalize(t.Status) === 'delayed' || normalize(t.Delay) === 'yes')).length;
 
     // Simple Heuristic
     let level = 'Healthy';
@@ -167,15 +168,17 @@ export const runAIAnalysis = (allTickets, staffData) => {
         }
 
         // Dept Aggregation
-        const isClosed = ['solved', 'resolved', 'closed', 'force close'].includes(normalize(t.Status));
+        const isClosed = ['solved', 'resolved', 'closed', 'force close', 'forceclose', 'fixed', 'done'].includes(normalize(t.Status));
         if (!isClosed) {
             deptLoad[dept].open++;
             deptLoad[dept].count++;
             const regDate = parseDate(t.Date);
             if (regDate) deptLoad[dept].totalAge += getHoursDiff(new Date(), regDate);
-        }
-        if (normalize(t.Status) === 'delayed' || normalize(t.Delay) === 'yes') {
-            deptLoad[dept].delayed++;
+
+            // ONLY count as delayed if it is NOT closed
+            if (normalize(t.Status) === 'delayed' || normalize(t.Delay) === 'yes') {
+                deptLoad[dept].delayed++;
+            }
         }
     });
 

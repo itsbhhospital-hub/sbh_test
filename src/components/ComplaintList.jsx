@@ -384,8 +384,17 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                 });
             } else if (filter === 'Solved') {
                 // Inclusive filtering for anything that counts as "Done"
-                const doneStatuses = ['solved', 'resolved', 'closed', 'fixed', 'done'];
-                filtered = filtered.filter(t => doneStatuses.includes(String(t.Status).toLowerCase()));
+                const doneStatuses = ['solved', 'resolved', 'closed', 'force close', 'forceclose', 'fixed', 'done'];
+                filtered = filtered.filter(t => doneStatuses.includes(normalize(t.Status)));
+            } else if (filter === 'Transferred') {
+                // Inclusive filtering for anything that has EVER been transferred
+                filtered = filtered.filter(t => {
+                    const hasEverTransferred = t.TransferDate || t.TransferredBy || t.LatestTransfer || normalize(t.Status) === 'transferred';
+                    if (!hasEverTransferred) return false;
+                    const doneStatuses = ['solved', 'resolved', 'closed', 'force close', 'forceclose', 'fixed', 'done'];
+                    const isClosed = doneStatuses.includes(normalize(t.Status));
+                    return isSuperAdmin || !isClosed;
+                });
             } else {
                 filtered = filtered.filter(t => String(t.Status).toLowerCase() === String(filter).toLowerCase());
             }
@@ -470,18 +479,23 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                     data.dept,
                     '',
                     data.reason,
-                    user.Username
+                    user.Username,
+                    selectedComplaint.Department // Added for legacy support/hard override
                 );
                 setSuccessMessage(`Ticket #${ticketId} successfully transferred to ${data.dept}.`);
             } else if (action === 'Extend') {
                 await firebaseService.extendComplaint(ticketId, data.date, data.reason);
                 setSuccessMessage(`Ticket #${ticketId} extended successfully. New date: ${data.date}`);
             } else if (action === 'Resolve' || action === 'Close' || action === 'Force Close') {
+                const finalRemark = action === 'Force Close' && !data.remark
+                    ? `Force Closed by AM Sir`
+                    : data.remark;
+
                 await firebaseService.updateComplaintStatus(
                     ticketId,
                     action === 'Force Close' ? 'Force Close' : 'Resolved',
                     user.Username, // Correct: resolvedBy
-                    data.remark    // Correct: remark
+                    finalRemark    // Correct: remark
                 );
                 if (action === 'Resolve') setSuccessMessage(`Ticket #${ticketId} marked as successfully resolved.`);
                 if (action === 'Force Close') setSuccessMessage(`Ticket #${ticketId} force closed by admin.`);
@@ -779,7 +793,15 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                                                 type: 'transfer',
                                                 date: parse(t.TransferDate || t.Date),
                                                 title: 'Complaint Transferred',
-                                                subtitle: `Relocated from ${t.FromDepartment} to ${t.NewDepartment}`, // Fixed format
+                                                subtitle: (
+                                                    <div className="flex flex-col gap-1 mt-0.5">
+                                                        <span className="font-bold text-slate-700">From {t.FromDepartment || 'Unknown'} to {t.ToDepartment || t.NewDepartment || 'Unknown'}</span>
+                                                        <div className="flex flex-col text-[10px] text-slate-500">
+                                                            <span>By: <span className="font-bold text-slate-600">{t.TransferredBy || 'System'}</span></span>
+                                                            {t.Reason && <span className="italic mt-0.5">"Remark: {t.Reason}"</span>}
+                                                        </div>
+                                                    </div>
+                                                ),
                                                 icon: <ArrowRight size={10} />,
                                                 color: 'sky'
                                             });
@@ -1016,7 +1038,7 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                                     {String(selectedComplaint.Status).toLowerCase() === 'closed' && canReopen(selectedComplaint) && String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase() && (
                                         <button onClick={() => setActionMode('Re-open')} className="flex-1 py-4 bg-white text-rose-600 font-black rounded-2xl border border-rose-100 hover:bg-rose-50 active:scale-[0.98] transition-all shadow-none uppercase text-[10px] tracking-widest">Re-open Ticket</button>
                                     )}
-                                    {user.Username === 'AM Sir' && selectedComplaint.Status !== 'Closed' && selectedComplaint.Status !== 'Force Close' && (
+                                    {isSuperAdmin && selectedComplaint.Status !== 'Closed' && selectedComplaint.Status !== 'Force Close' && (
                                         <button onClick={() => setActionMode('Force Close')} className="w-full py-4 bg-rose-50 text-rose-600 font-black rounded-2xl border border-rose-100 hover:bg-rose-100 active:scale-[0.98] transition-all shadow-none flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest">
                                             <Shield size={16} /> Force Close Case (Super Admin)
                                         </button>

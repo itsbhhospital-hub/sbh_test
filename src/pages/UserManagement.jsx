@@ -226,7 +226,7 @@ const UserManagement = () => {
                                                 )}
                                             </div>
                                             <div className="flex flex-col gap-0.5">
-                                                <span className="text-[12px] font-black text-emerald-950 uppercase tracking-tight group-hover:text-emerald-700 transition-colors">{u.Username}</span>
+                                                <span className="text-[12px] font-black text-emerald-950 tracking-tight group-hover:text-emerald-700 transition-colors">{u.Username}</span>
                                                 <div className="flex items-center gap-2">
                                                     <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-widest border ${u.Role === 'admin' ? 'bg-emerald-950 text-white border-emerald-950' :
                                                         u.Role === 'manager' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
@@ -369,7 +369,7 @@ const UserManagement = () => {
                                         <UserIcon className="absolute left-4 top-3.5 text-emerald-300 group-focus-within:text-emerald-600 transition-colors" size={18} />
                                         <input
                                             type="text"
-                                            className="w-full pl-12 pr-4 py-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl font-black text-xs uppercase tracking-tight text-emerald-950 focus:bg-white focus:border-emerald-600 focus:ring-4 focus:ring-emerald-50 outline-none transition-all placeholder:text-emerald-200"
+                                            className="w-full pl-12 pr-4 py-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl font-black text-xs tracking-tight text-emerald-950 focus:bg-white focus:border-emerald-600 focus:ring-4 focus:ring-emerald-50 outline-none transition-all placeholder:text-emerald-200"
                                             placeholder="Enter Full Name"
                                             value={newUserForm.Username}
                                             onChange={e => setNewUserForm({ ...newUserForm, Username: e.target.value })}
@@ -426,9 +426,10 @@ const UserManagement = () => {
                                         <input
                                             type={newUserForm.showNewPass ? "text" : "password"}
                                             className="w-full pl-12 pr-12 py-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl font-black text-xs tracking-widest text-emerald-950 outline-none focus:bg-white focus:border-emerald-600 focus:ring-4 focus:ring-emerald-50 transition-all font-mono"
-                                            placeholder="••••••••"
+                                            placeholder="•••••••• (min 6)"
                                             value={newUserForm.Password}
                                             onChange={e => setNewUserForm({ ...newUserForm, Password: e.target.value })}
+                                            minLength="6"
                                         />
                                         <button
                                             type="button"

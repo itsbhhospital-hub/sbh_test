@@ -144,16 +144,20 @@ export const firebaseService = { // Primary Service Object
 
     manualLogin: async (username, password) => {
         try {
-            const normalizedInput = String(username || '').toLowerCase().trim();
+            const exactInput = String(username || '').trim();
+            const normalizedInput = exactInput.toLowerCase();
 
-            let userRef = doc(db, "users", username);
+            // 1. Try EXACT case match first
+            let userRef = doc(db, "users", exactInput);
             let userSnap = await getDoc(userRef);
 
+            // 2. If not found, fall back to lowercase (legacy support)
             if (!userSnap.exists()) {
                 userRef = doc(db, "users", normalizedInput);
                 userSnap = await getDoc(userRef);
             }
 
+            // 3. Admin fallback
             if (!userSnap.exists() && normalizedInput === 'amsir') {
                 userRef = doc(db, "users", "AM Sir");
                 userSnap = await getDoc(userRef);
@@ -164,8 +168,16 @@ export const firebaseService = { // Primary Service Object
             }
 
             const userData = userSnap.data();
+
+            // EXACT Password match (Case Sensitive check)
             if (String(userData.Password) !== String(password)) {
                 throw new Error("Incorrect password");
+            }
+
+            // Check if exact Username matches the stored username (Case Sensitive check)
+            if (userData.Username && String(userData.Username) !== exactInput && normalizedInput !== 'amsir') {
+                // We allow login via lowercase fallback but we MUST return the Exact Stored Username 
+                // so the app uses the exact case from the database.
             }
 
             return { id: userSnap.id, ...userData };
@@ -200,7 +212,7 @@ export const firebaseService = { // Primary Service Object
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            await setDoc(doc(db, "users", user.uid), {
+            await setDoc(doc(db, "users", userData.Username), {
                 ...userData,
                 email,
                 uid: user.uid,
@@ -448,10 +460,18 @@ export const firebaseService = { // Primary Service Object
         }
     },
 
-    transferComplaint: async (id, newDept, newAssignee, reason, transferredBy) => {
+    transferComplaint: async (id, newDept, newAssignee, reason, transferredBy, uiFromDept) => {
         try {
             const docId = String(id).replace(/\//g, '_');
             const complaintRef = doc(db, "complaints", docId);
+
+            // Fetch current department to store in FromDepartment safely
+            const complaintSnap = await getDoc(complaintRef);
+            let fromDept = uiFromDept || "Unknown";
+
+            if (complaintSnap.exists() && complaintSnap.data().Department) {
+                fromDept = complaintSnap.data().Department;
+            }
 
             await updateDoc(complaintRef, {
                 Department: newDept,
@@ -462,7 +482,7 @@ export const firebaseService = { // Primary Service Object
 
             await addDoc(collection(db, "transfer_logs"), {
                 ComplaintID: id,
-                FromDepartment: '',
+                FromDepartment: fromDept,
                 ToDepartment: newDept,
                 TransferredBy: transferredBy,
                 ToUser: newAssignee,
@@ -475,7 +495,7 @@ export const firebaseService = { // Primary Service Object
             try {
                 const contacts = await getDepartmentMobiles(newDept);
                 const footer = getFooter();
-                const message = `🔄 *TICKET ROUTED* 🏥\n\nA ticket has been transferred to your department.\n\n🎫 *Ticket ID:* ${id}\n📤 *From:* ${transferredBy}\n📥 *To:* ${newDept}\n\n📝 *Reason:* ${reason}\n\nKindly review and process.${footer}`;
+                const message = `🔄 *TICKET ROUTED* 🏥\n\nA ticket has been transferred to your department.\n\n🎫 *Ticket ID:* ${id}\n📤 *From:* ${transferredBy} (${fromDept})\n📥 *To:* ${newDept}\n\n📝 *Reason:* ${reason}\n\nKindly review and process.${footer}`;
 
                 for (const contact of contacts) {
                     sendWhatsApp(contact.mobile, contact.name, message);
@@ -550,6 +570,70 @@ export const firebaseService = { // Primary Service Object
         }
     },
 
+    updateComplaintStatus: async (id, status, resolvedBy, remark = "") => {
+        try {
+            const complaintRef = doc(db, "complaints", id);
+            const now = new Date().toISOString();
+
+            await updateDoc(complaintRef, {
+                Status: status,
+                ResolvedBy: resolvedBy || "",
+                ResolvedDate: now,
+                LastUpdated: now,
+                Remark: remark || ""
+            });
+
+            // 🟢 NEW: Automated WhatsApp Alert for Force Close
+            if (status === 'Force Close') {
+                try {
+                    const snap = await getDoc(complaintRef);
+                    if (snap.exists()) {
+                        const ticketData = snap.data();
+                        const footer = "\n\nSBH CMS - AI Automated Alert";
+
+                        const msg = `🚨 *TICKET FORCE CLOSED* 🏥\n\nSystem Administrator (AM Sir) has manually force-closed the following ticket.\n\n🎫 *Ticket ID:* ${id}\n📍 *Department:* ${ticketData.Department || 'N/A'}\n🗣 *Reported By:* ${ticketData.ReportedBy || 'N/A'}\n❌ *Admin Remark:* ${remark || 'Force Closed by AM Sir'}\n\nThis case is now permanently closed.${footer}`;
+
+                        // Send to the person who reported it
+                        if (ticketData.Mobile && String(ticketData.Mobile).trim() !== '' && String(ticketData.Mobile).toLowerCase() !== 'n/a') {
+                            await exports.default.sendWhatsApp(ticketData.Mobile, ticketData.ReportedBy, msg);
+                        }
+
+                        // Also notify the department HDs that it was force closed
+                        const deptMobiles = await exports.default.getDepartmentMobiles(ticketData.Department);
+                        for (const contact of deptMobiles) {
+                            if (contact.mobile) {
+                                await exports.default.sendWhatsApp(contact.mobile, contact.name, msg);
+                            }
+                        }
+                    }
+                } catch (notifyErr) {
+                    console.error("Failed to send Force Close WhatsApp alert:", notifyErr);
+                }
+            }
+
+            return { status: 'success' };
+        } catch (error) {
+            console.error("Firestore updateComplaintStatus Error:", error);
+            throw error;
+        }
+    },
+
+    extendComplaint: async (id, date, reason) => {
+        try {
+            const complaintRef = doc(db, "complaints", id);
+            await updateDoc(complaintRef, {
+                Status: 'Extended',
+                TargetDate: date,
+                Remark: reason || "",
+                LastUpdated: new Date().toISOString()
+            });
+            return { status: 'success' };
+        } catch (error) {
+            console.error("Firestore extendComplaint Error:", error);
+            throw error;
+        }
+    },
+
     subscribeToComplaints: (callback) => {
         const q = query(collection(db, "complaints"), orderBy("Date", "desc"));
         return onSnapshot(q, (snapshot) => {
@@ -558,10 +642,27 @@ export const firebaseService = { // Primary Service Object
     },
 
     subscribeToCollection: (collectionName, callback, orderField = "createdAt") => {
-        const q = query(collection(db, collectionName), orderBy(orderField, "desc"));
-        return onSnapshot(q, (snapshot) => {
-            callback(normalizeDocs(snapshot));
-        });
+        try {
+            const colRef = collection(db, collectionName);
+            const q = orderField ? query(colRef, orderBy(orderField, "desc")) : query(colRef);
+
+            return onSnapshot(q, (snapshot) => {
+                callback(normalizeDocs(snapshot));
+            }, (error) => {
+                console.error(`Subscription error for ${collectionName}:`, error);
+                // Fallback to unordered if index is missing or fields don't exist
+                if (error.message.includes('failed: precond') || error.message.includes('index')) {
+                    console.log(`Falling back to unordered query for ${collectionName}`);
+                    const fallbackQ = query(colRef);
+                    onSnapshot(fallbackQ, (fallbackSnap) => {
+                        callback(normalizeDocs(fallbackSnap));
+                    });
+                }
+            });
+        } catch (error) {
+            console.error(`Failed to setup subscription for ${collectionName}:`, error);
+            return () => { }; // Return empty unsubscribe function
+        }
     },
 
     getBoosters: async () => {
@@ -626,11 +727,11 @@ export const firebaseService = { // Primary Service Object
     logUserVisit: async (username, ip) => {
         try {
             const userRef = doc(db, "users", username);
-            await updateDoc(userRef, {
+            await setDoc(userRef, {
                 LastLogin: new Date().toISOString(),
                 IPDetails: ip,
                 updatedAt: serverTimestamp()
-            });
+            }, { merge: true });
             return { status: 'success' };
         } catch (error) {
             console.error("Firestore logUserVisit Error:", error);

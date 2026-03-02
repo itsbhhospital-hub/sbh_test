@@ -125,22 +125,27 @@ const Dashboard = () => {
             const isVisible = isAdmin || rowDept === uDept || rowBy === uName || rowReporter === uName || rowResolver === uName;
             if (!isVisible) continue;
 
-            const isClosed = ['solved', 'closed', 'resolved', 'force close', 'done', 'fixed'].includes(status);
+            const isClosed = ['solved', 'closed', 'resolved', 'force close', 'forceclose', 'done', 'fixed'].includes(status);
+            const hasEverTransferred = t.TransferDate || t.TransferredBy || t.LatestTransfer || status === 'transferred';
 
             if (isClosed) {
                 initial.solved++;
+                if (isSuperAdmin && hasEverTransferred) {
+                    initial.transferred++;
+                }
                 continue;
             }
 
             initial.open++;
             if (status === 'pending' || status === 'in-progress') initial.pending++;
-            if (status === 'transferred') initial.transferred++;
+
+            if (hasEverTransferred) initial.transferred++;
 
             const hasTargetDate = t.TargetDate && String(t.TargetDate).trim() !== '' && String(t.TargetDate).toLowerCase() !== 'none';
             if (status === 'extended' || status === 'extend' || hasTargetDate) initial.extended++;
 
             const regTime = t.Date ? new Date(t.Date).getTime() : 0;
-            const isDelayed = normalize(t.Delay) === 'yes' || status === 'delayed' || (regTime > 0 && regTime < startOfToday);
+            const isDelayed = !isClosed && (normalize(t.Delay) === 'yes' || status === 'delayed' || (regTime > 0 && regTime < startOfToday));
             if (isDelayed) initial.delayed++;
         }
         return initial;
@@ -161,7 +166,8 @@ const Dashboard = () => {
             let delayCount = 0;
 
             allTickets.forEach(t => {
-                const isDelayed = String(t.Delay).toLowerCase() === 'yes' || String(t.Status).toLowerCase() === 'delayed';
+                const isClosed = ['solved', 'closed', 'resolved', 'force close', 'forceclose', 'done', 'fixed'].includes(normalize(t.Status));
+                const isDelayed = !isClosed && (String(t.Delay).toLowerCase() === 'yes' || String(t.Status).toLowerCase() === 'delayed');
                 if (isDelayed) {
                     if (isUserAdmin) {
                         delayCount++;
@@ -281,7 +287,7 @@ const Dashboard = () => {
             if (popupSubFilter === 'personal' && rowResolver !== uname) continue;
 
             const status = normalize(t.Status);
-            const isClosed = ['solved', 'closed', 'resolved', 'force close', 'done', 'fixed'].includes(status);
+            const isClosed = ['solved', 'closed', 'resolved', 'force close', 'forceclose', 'done', 'fixed'].includes(status);
 
             if (popupCategory === 'All') {
                 result.push(t);
@@ -300,6 +306,13 @@ const Dashboard = () => {
             } else if (popupCategory === 'Extended') {
                 const hasTargetDate = t.TargetDate && String(t.TargetDate).trim() !== '' && String(t.TargetDate).toLowerCase() !== 'none';
                 if (status === 'extended' || status === 'extend' || hasTargetDate) result.push(t);
+            } else if (popupCategory === 'Transferred') {
+                const hasEverTransferred = t.TransferDate || t.TransferredBy || t.LatestTransfer || status === 'transferred';
+                if (hasEverTransferred) {
+                    if (isSuperAdmin || !isClosed) {
+                        result.push(t);
+                    }
+                }
             } else if (status === popupCategory.toLowerCase()) {
                 result.push(t);
             }

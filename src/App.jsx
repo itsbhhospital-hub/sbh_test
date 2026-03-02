@@ -119,159 +119,167 @@ const Layout = ({ children }) => {
   );
 };
 
+function Providers({ children }) {
+  return (
+    <LoadingProvider>
+      <AuthProvider>
+        <IntelligenceProvider>
+          {children}
+        </IntelligenceProvider>
+      </AuthProvider>
+    </LoadingProvider>
+  );
+}
+
 function App() {
   return (
     <Router>
-      <LoadingProvider>
-        <AuthProvider>
-          <IntelligenceProvider>
-            <MobileWelcome />
-            <ReminderEngine />
-            <GlobalLoader />
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <MainDashboard />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/cms-panel" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="cmsAccess">
-                    <Layout>
-                      <Dashboard />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/new-complaint" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="cmsAccess">
-                    <Layout>
-                      <NewComplaint />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/my-complaints" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="cmsAccess">
-                    <Layout>
-                      <MyComplaints />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/solved-by-me" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="cmsAccess">
-                    <Layout>
-                      <SolvedByMe />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/work-report" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <WorkReport />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/user-management" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <UserManagement />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/case-transfer" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="cmsAccess">
-                    <Layout>
-                      <CaseTransfer />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/extended-cases" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="cmsAccess">
-                    <Layout>
-                      <ExtendedCases />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/change-password" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <ChangePassword />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/ai-command-center" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="cmsAccess">
-                    <Layout>
-                      <AICommandCenter />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/assets" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="assetsAccess">
-                    <Layout>
-                      <AssetsPanel />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/assets/add" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="assetsAccess">
-                    <Layout>
-                      <AddAsset />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/assets/:id" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="assetsAccess">
-                    <Layout>
-                      <AssetDetails />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/director" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="assetsAccess">
-                    <Layout>
-                      <DirectorDashboard />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/service-team" element={
-                <ProtectedRoute>
-                  <PermissionRoute requiredPermission="assetsAccess">
-                    <Layout>
-                      <ServiceTeamPanel />
-                    </Layout>
-                  </PermissionRoute>
-                </ProtectedRoute>
-              } />
-              <Route path="/asset-view/:id" element={<PublicAssetView />} />
-            </Routes>
-          </IntelligenceProvider>
-        </AuthProvider>
-      </LoadingProvider>
+      <Providers>
+        <MobileWelcome />
+        <ReminderEngine />
+        <GlobalLoader />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout>
+                <MainDashboard />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/cms-panel" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="cmsAccess">
+                <Layout>
+                  <Dashboard />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/new-complaint" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="cmsAccess">
+                <Layout>
+                  <NewComplaint />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/my-complaints" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="cmsAccess">
+                <Layout>
+                  <MyComplaints />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/solved-by-me" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="cmsAccess">
+                <Layout>
+                  <SolvedByMe />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/work-report" element={
+            <ProtectedRoute>
+              <Layout>
+                <WorkReport />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/user-management" element={
+            <ProtectedRoute>
+              <Layout>
+                <UserManagement />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/case-transfer" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="cmsAccess">
+                <Layout>
+                  <CaseTransfer />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/extended-cases" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="cmsAccess">
+                <Layout>
+                  <ExtendedCases />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/change-password" element={
+            <ProtectedRoute>
+              <Layout>
+                <ChangePassword />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/ai-command-center" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="cmsAccess">
+                <Layout>
+                  <AICommandCenter />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/assets" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="assetsAccess">
+                <Layout>
+                  <AssetsPanel />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/assets/add" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="assetsAccess">
+                <Layout>
+                  <AddAsset />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/assets/:id" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="assetsAccess">
+                <Layout>
+                  <AssetDetails />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/director" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="assetsAccess">
+                <Layout>
+                  <DirectorDashboard />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/service-team" element={
+            <ProtectedRoute>
+              <PermissionRoute requiredPermission="assetsAccess">
+                <Layout>
+                  <ServiceTeamPanel />
+                </Layout>
+              </PermissionRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/asset-view/:id" element={<PublicAssetView />} />
+        </Routes>
+      </Providers>
     </Router>
   );
 }

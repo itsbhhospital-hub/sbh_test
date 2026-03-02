@@ -342,15 +342,28 @@ function updateUserIP(doc, username, ip) {
     // We will try to find these columns, if they don't exist, we might skip to avoid breaking sheet structure unexpectedly
     // OR we can append. Ideally, the implementation plan said "Add columns". Let's try to find existing or standard names.
 
-    const ipColIdx = findCol(headers, 'LastLoginIP') - 1;
-    const dateColIdx = findCol(headers, 'LastLoginDate') - 1;
-    const timeColIdx = findCol(headers, 'LastLoginTime') - 1;
-    const fullLoginColIdx = findCol(headers, 'LastLogin') - 1; // Legacy
+    let ipColIdx = findCol(headers, 'IPDetails') - 1;
+    if (ipColIdx < 0) ipColIdx = findCol(headers, 'LastLoginIP') - 1;
+    if (ipColIdx < 0) ipColIdx = findCol(headers, 'IP Address') - 1;
+
+    let fullLoginColIdx = findCol(headers, 'LastLogin') - 1;
+    if (fullLoginColIdx < 0) fullLoginColIdx = findCol(headers, 'Last Login') - 1;
+
+    // Create columns dynamically if they do not exist
+    if (ipColIdx < 0) {
+        ipColIdx = sheet.getLastColumn();
+        sheet.getRange(1, ipColIdx + 1).setValue('IPDetails');
+        headers.push('IPDetails');
+    }
+
+    if (fullLoginColIdx < 0) {
+        fullLoginColIdx = sheet.getLastColumn();
+        sheet.getRange(1, fullLoginColIdx + 1).setValue('LastLogin');
+        headers.push('LastLogin');
+    }
 
     const now = new Date();
-    const dateStr = Utilities.formatDate(now, IST_TIMEZONE, 'yyyy-MM-dd');
-    const timeStr = Utilities.formatDate(now, IST_TIMEZONE, 'HH:mm:ss');
-
+    // We'll just save the ISO String for frontend to parse
     const target = normalize(username);
 
     for (let i = 1; i < data.length; i++) {
@@ -358,12 +371,10 @@ function updateUserIP(doc, username, ip) {
             const row = i + 1;
 
             // Update IP
-            if (ipColIdx > -1) sheet.getRange(row, ipColIdx + 1).setValue(ip);
+            sheet.getRange(row, ipColIdx + 1).setValue(ip);
 
             // Update Login Timestamps
-            if (dateColIdx > -1) sheet.getRange(row, dateColIdx + 1).setValue("'" + dateStr); // Prepend "'"
-            if (timeColIdx > -1) sheet.getRange(row, timeColIdx + 1).setValue("'" + timeStr); // Prepend "'"
-            if (fullLoginColIdx > -1) sheet.getRange(row, fullLoginColIdx + 1).setValue("'" + now.toISOString()); // Prepend "'"
+            sheet.getRange(row, fullLoginColIdx + 1).setValue("'" + now.toISOString()); // Prepend "'"
 
             return { success: true };
         }
