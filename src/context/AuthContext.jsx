@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useLoading } from './LoadingContext';
 import { sheetsService, getGoogleDriveDirectLink } from '../services/googleSheets';
 import { firebaseService } from '../services/firebaseService';
@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const { showLoader, hideLoader } = useLoading();
 
-    React.useEffect(() => {
+    useEffect(() => {
         showLoader(true, true); // Trigger system-level loader for initial boot
         // Check local storage for persisted session
         const storedUser = localStorage.getItem('sbh_user');
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     // Active Session Monitor & Auto Logout
-    React.useEffect(() => {
+    useEffect(() => {
         if (!user) return;
         const interval = setInterval(() => {
             const loginTime = localStorage.getItem('sbh_login_time');
@@ -146,7 +146,7 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => {
-    const context = React.useContext(AuthContext);
+    const context = useContext(AuthContext);
     if (context === undefined || context === null) {
         console.error("🚨 [AuthContext] useAuth must be used within an AuthProvider");
         return {

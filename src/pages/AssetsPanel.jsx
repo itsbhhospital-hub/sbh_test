@@ -14,6 +14,7 @@ import ScrollControls from '../components/ScrollControls';
 import BulkUploadModal from '../components/BulkUploadModal';
 import jsPDF from 'jspdf';
 import QRCodeLib from 'qrcode';
+import QRScannerModal from '../components/QRScannerModal';
 
 // --- HELPERS OUTSIDE COMPONENT ---
 const getAssetCategory = (asset) => {
@@ -231,6 +232,24 @@ const AssetsPanel = () => {
 
     const [isBulkModalOpen, setIsBulkModalOpen] = React.useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = React.useState(false);
+    const [isScannerOpen, setIsScannerOpen] = React.useState(false);
+
+    const handleCameraScan = (decodedText) => {
+        setIsScannerOpen(false);
+        if (!decodedText) return;
+
+        let assetId = decodedText;
+        // If it's a URL, extract the last part Assuming format: domain.com/asset-view/1234
+        if (decodedText.includes('asset-view/')) {
+            const parts = decodedText.split('asset-view/');
+            assetId = parts[parts.length - 1].replace(/[^a-zA-Z0-9_-]/g, '');
+        }
+
+        // Navigate to the asset details directly
+        if (assetId) {
+            navigate(`/assets/${assetId}`);
+        }
+    };
 
     // --- DATA FETCHING ---
     const fetchAssets = async (isRefetch = false) => {
@@ -413,11 +432,24 @@ const AssetsPanel = () => {
                         Bulk Upload
                     </button>
                     <button
+                        onClick={() => setIsScannerOpen(true)}
+                        className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-600/20 hover:bg-black transition-all active:scale-95"
+                    >
+                        <QrCode size={18} />
+                        Scan
+                    </button>
+                    <button
                         onClick={() => navigate('/assets/add')}
-                        className="flex items-center justify-center gap-2 bg-[#2e7d32] text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-[#2e7d32]/20 hover:bg-black transition-all active:scale-95"
+                        className="flex items-center justify-center gap-2 bg-[#2e7d32] text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-[#2e7d32]/20 hover:bg-black transition-all active:scale-95 hidden sm:flex"
                     >
                         <Plus size={18} />
                         Add New Asset
+                    </button>
+                    <button
+                        onClick={() => navigate('/assets/add')}
+                        className="flex items-center justify-center gap-2 bg-[#2e7d32] text-white p-4 rounded-2xl font-black text-xs shadow-xl shadow-[#2e7d32]/20 hover:bg-black transition-all active:scale-95 sm:hidden"
+                    >
+                        <Plus size={18} />
                     </button>
                 </div>
             </div>
@@ -533,6 +565,11 @@ const AssetsPanel = () => {
                 isOpen={isBulkModalOpen}
                 onClose={() => setIsBulkModalOpen(false)}
                 onUploadSuccess={() => fetchAssets(true)}
+            />
+            <QRScannerModal
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
+                onScan={handleCameraScan}
             />
         </div>
     );

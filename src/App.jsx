@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoadingProvider, useLoading } from './context/LoadingContext';
 
@@ -12,6 +12,7 @@ import Footer from './components/Footer';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import { App as CapacitorApp } from '@capacitor/app';
 import MainDashboard from './pages/MainDashboard';
 import PageLoader from './components/PageLoader';
 import MobileWelcome from './components/MobileWelcome';
@@ -131,10 +132,35 @@ function Providers({ children }) {
   );
 }
 
+function HardwareBackButtonHandler() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  React.useEffect(() => {
+    // Listen to physical Android back button presses
+    const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      // If we are on the main entry points, let the app close safely
+      if (location.pathname === '/' || location.pathname === '/login') {
+        CapacitorApp.exitApp();
+      } else {
+        // Otherwise, navigate back the history
+        navigate(-1);
+      }
+    });
+
+    return () => {
+      backButtonListener.then(listener => listener.remove());
+    };
+  }, [navigate, location.pathname]);
+
+  return null;
+}
+
 function App() {
   return (
     <Router>
       <Providers>
+        <HardwareBackButtonHandler />
         <MobileWelcome />
         <ReminderEngine />
         <GlobalLoader />

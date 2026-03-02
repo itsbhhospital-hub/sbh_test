@@ -130,7 +130,8 @@ const Dashboard = () => {
 
             if (isClosed) {
                 initial.solved++;
-                if (isSuperAdmin && hasEverTransferred) {
+                // If this specific user transferred the ticket, ALWAYS count it in their "Transferred" bucket permanently
+                if (normalize(t.TransferredBy) === uName || (isSuperAdmin && hasEverTransferred)) {
                     initial.transferred++;
                 }
                 continue;
@@ -139,7 +140,8 @@ const Dashboard = () => {
             initial.open++;
             if (status === 'pending' || status === 'in-progress') initial.pending++;
 
-            if (hasEverTransferred) initial.transferred++;
+            // For open tickets, if they or Admin transferred it, count it
+            if (normalize(t.TransferredBy) === uName || hasEverTransferred) initial.transferred++;
 
             const hasTargetDate = t.TargetDate && String(t.TargetDate).trim() !== '' && String(t.TargetDate).toLowerCase() !== 'none';
             if (status === 'extended' || status === 'extend' || hasTargetDate) initial.extended++;
@@ -309,7 +311,11 @@ const Dashboard = () => {
             } else if (popupCategory === 'Transferred') {
                 const hasEverTransferred = t.TransferDate || t.TransferredBy || t.LatestTransfer || status === 'transferred';
                 if (hasEverTransferred) {
-                    if (isSuperAdmin || !isClosed) {
+                    const uName = normalize(user?.Username);
+                    // Standard users see the ticket if they personally transferred it (perm. log),
+                    // or if it's currently actively 'transferred' to their dept and open.
+                    // Admins see all transferred tickets historically.
+                    if (isSuperAdmin || normalize(t.TransferredBy) === uName || !isClosed) {
                         result.push(t);
                     }
                 }

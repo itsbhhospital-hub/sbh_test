@@ -1,17 +1,17 @@
-import React from 'react';
+import React, { createContext, useState, useRef, useEffect, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const LoadingContext = React.createContext();
+const LoadingContext = createContext();
 
 export const LoadingProvider = ({ children }) => {
-    const [isLoading, setIsLoading] = React.useState(false);
-    const [isSystemLoading, setIsSystemLoading] = React.useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSystemLoading, setIsSystemLoading] = useState(false);
     const location = useLocation();
 
     // Refs to manage timers without re-renders
-    const startTimerRef = React.useRef(null);
-    const minDisplayTimerRef = React.useRef(null);
-    const startTimeRef = React.useRef(null);
+    const startTimerRef = useRef(null);
+    const minDisplayTimerRef = useRef(null);
+    const startTimeRef = useRef(null);
 
     const showLoader = (immediate = false, isSystem = false) => {
         // Clear any pending clear timers
@@ -69,7 +69,7 @@ export const LoadingProvider = ({ children }) => {
     // }, [location]);
 
     // Event Listener Bridge with Smart Logic
-    React.useEffect(() => {
+    useEffect(() => {
         const handleStart = (e) => showLoader(e.detail?.immediate, e.detail?.isSystem);
         const handleEnd = () => hideLoader();
 
@@ -89,4 +89,4 @@ export const LoadingProvider = ({ children }) => {
     );
 };
 
-export const useLoading = () => React.useContext(LoadingContext);
+export const useLoading = () => useContext(LoadingContext);

@@ -124,14 +124,7 @@ const ComplaintRow = memo(({ complaint, onClick, aiDecision }) => {
                 )}
             </td>
             <td className="p-4 py-4 hidden md:table-cell">
-                {complaint.LatestTransfer ? (
-                    <div className="flex flex-col">
-                        <span className="text-[9px] font-bold uppercase text-slate-300 tracking-wider mb-0.5">Released By</span>
-                        <span className="text-[11px] font-bold text-[#1f2d2a] uppercase tracking-tight truncate">{complaint.LatestTransfer.TransferredBy || 'Unknown'}</span>
-                    </div>
-                ) : (
-                    <span className="text-[11px] font-bold text-[#1f2d2a] uppercase tracking-tight truncate">{complaint.Unit}</span>
-                )}
+                <span className="text-[11px] font-bold text-[#1f2d2a] uppercase tracking-tight truncate">{complaint.Unit}</span>
             </td>
             <td className="p-4 py-4 hidden md:table-cell">
                 {complaint.LatestTransfer ? (
@@ -427,16 +420,6 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
 
 
     const openDetailModal = (complaint) => {
-        const role = (user.Role || '').toUpperCase().trim();
-        const isTransferred = (complaint.Status || '').toLowerCase() === 'transferred';
-
-        if (isTransferred) {
-            const isMyDept = String(user.Department || '').toLowerCase() === String(complaint.Department || '').toLowerCase();
-            if (role !== 'ADMIN' && role !== 'SUPER_ADMIN' && !isMyDept) {
-                return;
-            }
-        }
-
         setSelectedComplaint(complaint);
         setDetailModalOpen(true);
     };
@@ -771,23 +754,29 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                                             type: 'created',
                                             date: parse(selectedComplaint.Date),
                                             title: 'Complaint Registered',
-                                            subtitle: `Initiated by ${selectedComplaint.ReportedBy}`,
+                                            subtitle: `Reported by ${selectedComplaint.ReportedBy}`,
                                             icon: <Plus size={10} />,
                                             color: 'green'
                                         }];
 
-                                        if (selectedComplaint.Department) {
+                                        const transfers = transferLogs.filter(t => String(t.ComplaintID) === String(selectedComplaint.ID));
+
+                                        // Ensure transfers are sorted chronologically
+                                        transfers.sort((a, b) => parse(a.TransferDate || a.Date) - parse(b.TransferDate || b.Date));
+
+                                        // The initial assigned department is either the FromDepartment of the first transfer or the current Department
+                                        const originalDepartment = transfers.length > 0 ? transfers[0].FromDepartment : selectedComplaint.Department;
+
+                                        if (originalDepartment) {
                                             events.push({
                                                 type: 'assigned',
                                                 date: parse(selectedComplaint.Date),
                                                 title: 'Department Assigned',
-                                                subtitle: `Routed to ${selectedComplaint.Department} Management`,
+                                                subtitle: `Assigned to ${originalDepartment}`,
                                                 icon: <Building2 size={10} />,
                                                 color: 'blue'
                                             });
                                         }
-
-                                        const transfers = transferLogs.filter(t => String(t.ComplaintID) === String(selectedComplaint.ID));
                                         transfers.forEach(t => {
                                             events.push({
                                                 type: 'transfer',
@@ -1012,39 +1001,47 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                                 </>
                             )}
 
-                            {!actionMode && (
-                                <div className="flex flex-wrap gap-3">
-                                    {/* BOOSTER SYSTEM BUTTON */}
-                                    {isAdmin && !['closed', 'resolved', 'force close'].includes(selectedComplaint.Status?.toLowerCase()) && (
-                                        <button
-                                            onClick={() => setActionMode('Booster')}
-                                            className="w-full py-4 bg-amber-50 text-amber-600 font-black rounded-2xl border border-amber-100 hover:bg-amber-100 active:scale-[0.98] transition-all shadow-none flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest mb-1"
-                                        >
-                                            <Share2 size={16} /> Send Priority Action Notice (Booster)
-                                        </button>
-                                    )}
+                            {!actionMode && (() => {
+                                const isTrueOwner = isAdmin || String(user.Department || '').toLowerCase() === String(selectedComplaint.Department || '').toLowerCase();
 
-                                    {(String(selectedComplaint.Status).toLowerCase() === 'open' || String(selectedComplaint.Status).toLowerCase() === 'transferred') &&
-                                        (user.Role === 'admin' || String(user.Department || '').toLowerCase() === String(selectedComplaint.Department || '').toLowerCase()) && (
+                                return isTrueOwner ? (
+                                    <div className="flex flex-wrap gap-3">
+                                        {/* BOOSTER SYSTEM BUTTON */}
+                                        {isAdmin && !['closed', 'resolved', 'force close'].includes(selectedComplaint.Status?.toLowerCase()) && (
+                                            <button
+                                                onClick={() => setActionMode('Booster')}
+                                                className="w-full py-4 bg-amber-50 text-amber-600 font-black rounded-2xl border border-amber-100 hover:bg-amber-100 active:scale-[0.98] transition-all shadow-none flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest mb-1"
+                                            >
+                                                <Share2 size={16} /> Send Priority Action Notice (Booster)
+                                            </button>
+                                        )}
+
+                                        {['open', 'transferred', 'pending', 'extended', 'delayed'].includes(String(selectedComplaint.Status).toLowerCase()) && (
                                             <>
                                                 <button onClick={() => setActionMode('Resolve')} className="flex-1 py-4 bg-[#2e7d32] text-white font-black rounded-2xl shadow-none hover:bg-[#256628] active:scale-[0.98] transition-all uppercase text-[10px] tracking-widest">Mark as Resolved</button>
                                                 <button onClick={() => setActionMode('Extend')} className="flex-1 py-4 bg-white text-[#1f2d2a] font-black rounded-2xl border border-[#dcdcdc] hover:bg-[#f8faf9] active:scale-[0.98] transition-all uppercase text-[10px] tracking-widest">Extend</button>
                                                 <button onClick={() => setActionMode('Transfer')} className="w-full py-4 bg-[#1f2d2a] text-[#2e7d32] font-black rounded-2xl border border-[#2e7d32]/10 hover:bg-black active:scale-[0.98] transition-all shadow-none uppercase text-[10px] tracking-widest">Transfer to Another Dept</button>
                                             </>
                                         )}
-                                    {['closed', 'resolved'].includes(String(selectedComplaint.Status).toLowerCase()) && !selectedComplaint.Rating && !hasImmutableRating(selectedComplaint.ID) && String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase() && (
-                                        <button onClick={() => setActionMode('Rate')} className="flex-1 py-4 bg-[#2e7d32] text-white font-black rounded-2xl hover:bg-[#256628] transition-all shadow-none active:scale-[0.98] uppercase tracking-widest text-[10px]">Rate This Service</button>
-                                    )}
-                                    {String(selectedComplaint.Status).toLowerCase() === 'closed' && canReopen(selectedComplaint) && String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase() && (
-                                        <button onClick={() => setActionMode('Re-open')} className="flex-1 py-4 bg-white text-rose-600 font-black rounded-2xl border border-rose-100 hover:bg-rose-50 active:scale-[0.98] transition-all shadow-none uppercase text-[10px] tracking-widest">Re-open Ticket</button>
-                                    )}
-                                    {isSuperAdmin && selectedComplaint.Status !== 'Closed' && selectedComplaint.Status !== 'Force Close' && (
-                                        <button onClick={() => setActionMode('Force Close')} className="w-full py-4 bg-rose-50 text-rose-600 font-black rounded-2xl border border-rose-100 hover:bg-rose-100 active:scale-[0.98] transition-all shadow-none flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest">
-                                            <Shield size={16} /> Force Close Case (Super Admin)
-                                        </button>
-                                    )}
-                                </div>
-                            )}
+                                        {['closed', 'resolved'].includes(String(selectedComplaint.Status).toLowerCase()) && !selectedComplaint.Rating && !hasImmutableRating(selectedComplaint.ID) && String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase() && (
+                                            <button onClick={() => setActionMode('Rate')} className="flex-1 py-4 bg-[#2e7d32] text-white font-black rounded-2xl hover:bg-[#256628] transition-all shadow-none active:scale-[0.98] uppercase tracking-widest text-[10px]">Rate This Service</button>
+                                        )}
+                                        {String(selectedComplaint.Status).toLowerCase() === 'closed' && canReopen(selectedComplaint) && String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase() && (
+                                            <button onClick={() => setActionMode('Re-open')} className="flex-1 py-4 bg-white text-rose-600 font-black rounded-2xl border border-rose-100 hover:bg-rose-50 active:scale-[0.98] transition-all shadow-none uppercase text-[10px] tracking-widest">Re-open Ticket</button>
+                                        )}
+                                        {isSuperAdmin && selectedComplaint.Status !== 'Closed' && selectedComplaint.Status !== 'Force Close' && (
+                                            <button onClick={() => setActionMode('Force Close')} className="w-full py-4 bg-rose-50 text-rose-600 font-black rounded-2xl border border-rose-100 hover:bg-rose-100 active:scale-[0.98] transition-all shadow-none flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest">
+                                                <Shield size={16} /> Force Close Case (Super Admin)
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="w-full py-4 bg-[#f8faf9] rounded-2xl border border-[#dcdcdc] flex items-center justify-center gap-2 text-slate-400">
+                                        <Shield size={16} />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Read Only View Mode</span>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>,

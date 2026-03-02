@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback, useRef, useEffect, useContext, createContext, useMemo } from 'react';
 import { sheetsService } from '../services/googleSheets';
 import { firebaseService } from '../services/firebaseService';
 import { assetsService } from '../services/assetsService';
@@ -7,7 +7,7 @@ import { runAIAnalysis } from '../services/aiCore';
 
 import { normalize, safeNumber } from '../utils/dataUtils';
 
-const IntelligenceContext = React.createContext({ loading: true });
+const IntelligenceContext = createContext({ loading: true });
 
 // --- DASHBOARD HELPERS ---
 const findField = (item, prefixes) => {
@@ -55,55 +55,55 @@ const parseDateSafe = (d) => {
 
 export const IntelligenceProvider = ({ children }) => {
     const { user } = useAuth();
-    const lastDataHash = React.useRef('');
+    const lastDataHash = useRef('');
 
     // ------------------------------------------------------------------
     // RAW DATA STATE
     // ------------------------------------------------------------------
-    const [allTickets, setAllTickets] = React.useState([]);
-    const [allRatings, setAllRatings] = React.useState([]);
-    const [allTransfers, setAllTransfers] = React.useState([]);
-    const [allExtensions, setAllExtensions] = React.useState([]);
-    const [allBoosters, setAllBoosters] = React.useState([]);
-    const [assets, setAssets] = React.useState([]);
-    const [users, setUsers] = React.useState([]);
+    const [allTickets, setAllTickets] = useState([]);
+    const [allRatings, setAllRatings] = useState([]);
+    const [allTransfers, setAllTransfers] = useState([]);
+    const [allExtensions, setAllExtensions] = useState([]);
+    const [allBoosters, setAllBoosters] = useState([]);
+    const [assets, setAssets] = useState([]);
+    const [users, setUsers] = useState([]);
 
-    const [stats, setStats] = React.useState({
+    const [stats, setStats] = useState({
         open: 0, pending: 0, solved: 0, transferred: 0, extended: 0, delayed: 0, activeStaff: 0
     });
-    const [assetStats, setAssetStats] = React.useState({
+    const [assetStats, setAssetStats] = useState({
         total: 0, risk: 0, void: 0, serviceDue: 0, healthy: 0
     });
-    const [trendStats, setTrendStats] = React.useState([]);
-    const [loading, setLoading] = React.useState(true);
-    const [lastSync, setLastSync] = React.useState(null);
+    const [trendStats, setTrendStats] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [lastSync, setLastSync] = useState(null);
 
     // ------------------------------------------------------------------
     // INTELLIGENCE METRICS
     // ------------------------------------------------------------------
-    const [hospitalHealth, setHospitalHealth] = React.useState(100);
-    const [stressIndex, setStressIndex] = React.useState(0);
-    const [predictedDelays, setPredictedDelays] = React.useState([]);
-    const [deptRisks, setDeptRisks] = React.useState({});
-    const [deptStats, setDeptStats] = React.useState([]);
-    const [flowStats, setFlowStats] = React.useState({ open: 0, solved: 0, delayed: 0, transferred: 0, efficiency: 0, activeStaff: 0 });
-    const [staffStats, setStaffStats] = React.useState([]);
-    const [delayRisks, setDelayRisks] = React.useState([]);
-    const [alerts, setAlerts] = React.useState([]);
-    const [aiRecommendations, setAiRecommendations] = React.useState({ booster: null, delayWarning: null });
-    const [aiRiskReport, setAiRiskReport] = React.useState([]);
-    const [aiDeptLoad, setAiDeptLoad] = React.useState({});
-    const [aiStaffScores, setAiStaffScores] = React.useState({});
-    const [loadWarnings, setLoadWarnings] = React.useState([]);
-    const [deptTrends, setDeptTrends] = React.useState([]);
-    const [lastAiPulse, setLastAiPulse] = React.useState(new Date());
+    const [hospitalHealth, setHospitalHealth] = useState(100);
+    const [stressIndex, setStressIndex] = useState(0);
+    const [predictedDelays, setPredictedDelays] = useState([]);
+    const [deptRisks, setDeptRisks] = useState({});
+    const [deptStats, setDeptStats] = useState([]);
+    const [flowStats, setFlowStats] = useState({ open: 0, solved: 0, delayed: 0, transferred: 0, efficiency: 0, activeStaff: 0 });
+    const [staffStats, setStaffStats] = useState([]);
+    const [delayRisks, setDelayRisks] = useState([]);
+    const [alerts, setAlerts] = useState([]);
+    const [aiRecommendations, setAiRecommendations] = useState({ booster: null, delayWarning: null });
+    const [aiRiskReport, setAiRiskReport] = useState([]);
+    const [aiDeptLoad, setAiDeptLoad] = useState({});
+    const [aiStaffScores, setAiStaffScores] = useState({});
+    const [loadWarnings, setLoadWarnings] = useState([]);
+    const [deptTrends, setDeptTrends] = useState([]);
+    const [lastAiPulse, setLastAiPulse] = useState(new Date());
 
-    const [isRefreshing, setIsRefreshing] = React.useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // ------------------------------------------------------------------
     // ANALYSIS ENGINE (PERFORMANCE OPTIMIZED)
     // ------------------------------------------------------------------
-    const analyzeSystem = React.useCallback((tickets, ratings, assetsData, usersList) => {
+    const analyzeSystem = useCallback((tickets, ratings, assetsData, usersList) => {
         if (!tickets || !usersList) return;
 
         const now = new Date();
@@ -412,7 +412,7 @@ export const IntelligenceProvider = ({ children }) => {
         setLastAiPulse(new Date());
     }, [user]);
 
-    const getAiCaseDecision = React.useCallback((ticket) => {
+    const getAiCaseDecision = useCallback((ticket) => {
         const regDateStr = ticket.Date || ticket.Timestamp;
         let priority = { label: 'Normal', color: 'bg-slate-100 text-slate-500' };
         let delayRisk = false;
@@ -447,7 +447,7 @@ export const IntelligenceProvider = ({ children }) => {
         return { priority, delayRisk };
     }, [predictedDelays]);
 
-    const getTransferSuggestion = React.useCallback((ticket) => {
+    const getTransferSuggestion = useCallback((ticket) => {
         if (!ticket || !ticket.Description) return null;
         const desc = normalize(ticket.Description);
         if (desc.includes('computer') || desc.includes('printer') || desc.includes('internet') || desc.includes('wifi')) return 'IT';
@@ -457,7 +457,7 @@ export const IntelligenceProvider = ({ children }) => {
         return null;
     }, []);
 
-    const getResolverRecommendation = React.useCallback((department) => {
+    const getResolverRecommendation = useCallback((department) => {
         if (!department) return null;
         const targetDept = normalize(department);
         const deptStaffNames = users
@@ -471,7 +471,7 @@ export const IntelligenceProvider = ({ children }) => {
         return bestPerformer ? bestPerformer.Username : null;
     }, [users, staffStats]);
 
-    const refreshIntelligence = React.useCallback(async () => {
+    const refreshIntelligence = useCallback(async (isManual = false) => {
         if (!user || isRefreshing) return;
         setIsRefreshing(true);
         try {
@@ -498,7 +498,7 @@ export const IntelligenceProvider = ({ children }) => {
         }
     }, [user, isRefreshing]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!user) return;
 
         // 1. Initial Load for everything else
@@ -558,11 +558,11 @@ export const IntelligenceProvider = ({ children }) => {
         };
     }, [user]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         analyzeSystem(allTickets, allRatings, assets, users);
     }, [allTickets, allRatings, assets, users, analyzeSystem]);
 
-    const getCrisisRisk = React.useCallback(() => {
+    const getCrisisRisk = useCallback(() => {
         if (stressIndex > 70) return 'CRITICAL';
         if (stressIndex > 40) return 'ELEVATED';
         return 'NORMAL';
@@ -583,4 +583,4 @@ export const IntelligenceProvider = ({ children }) => {
     );
 };
 
-export const useIntelligence = () => React.useContext(IntelligenceContext);
+export const useIntelligence = () => useContext(IntelligenceContext);
