@@ -227,6 +227,10 @@ function doPost(e) {
             const result = uploadProfileImage(payload.image, payload.username);
             return response('success', 'Image Uploaded', result);
         }
+        if (action === 'uploadAssetFile') {
+            const result = uploadAssetFile(payload.base64Data, payload.fileName, payload.mimeType);
+            return response('success', 'File Uploaded', result);
+        }
         if (action === 'updateUserIP') {
             updateUserIP(SpreadsheetApp.getActiveSpreadsheet(), payload.username, payload.ip);
             return response('success', 'IP Updated');
@@ -292,6 +296,32 @@ function uploadProfileImage(base64Data, username) {
     updateUserImageLink(doc, username, publicUrl);
 
     return { url: publicUrl };
+}
+
+/**
+ * Uploads a generic file to Google Drive and returns the public link.
+ */
+function uploadAssetFile(base64Data, fileName, mimeType) {
+    if (!DRIVE_FOLDER_ID) throw new Error("Drive Folder ID not configured.");
+
+    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+
+    // 1. Decorate Base64
+    const data = base64Data.split(',')[1] || base64Data;
+    const decoded = Utilities.base64Decode(data);
+    const blob = Utilities.newBlob(decoded, mimeType || 'application/octet-stream', fileName);
+
+    // 2. Create new file
+    const file = folder.createFile(blob);
+
+    // 3. Set Permission to Public (Viewer)
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // 4. Get Download URL (Direct Link)
+    const fileId = file.getId();
+    const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+
+    return { url: publicUrl, fileName: fileName };
 }
 
 /**

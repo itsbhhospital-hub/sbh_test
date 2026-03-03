@@ -14,7 +14,7 @@ const AddAsset = () => {
         machineName: '',
         serialNumber: '',
         purchaseDate: '',
-        invoiceFile: null, // Base64
+        invoiceFile: null, // Raw Javascript File Object
         invoiceName: '',
         invoiceType: '',
         currentServiceDate: '',
@@ -63,10 +63,11 @@ const AddAsset = () => {
         const file = e.target.files[0];
         if (file) {
             try {
-                const base64 = await assetsService.fileToBase64(file);
+                // Pass the raw JS File object to formData
+                // firebaseService handle base64 encoding transparently when proxying to apps script
                 setFormData(prev => ({
                     ...prev,
-                    invoiceFile: base64,
+                    invoiceFile: file,
                     invoiceName: file.name,
                     invoiceType: file.type
                 }));
@@ -439,11 +440,9 @@ const AddAsset = () => {
                                 <div className="mt-4 relative group">
                                     {formData.invoiceType?.startsWith('image/') ? (
                                         <div className="relative border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                                            <img src={`data:${formData.invoiceType};base64,${formData.invoiceFile}`} alt="Preview" className="w-full h-auto max-h-48 object-contain bg-slate-50" />
+                                            {/* Build local preview using standard UI Blob */}
+                                            <img src={(formData.invoiceFile && formData.invoiceFile instanceof File) ? URL.createObjectURL(formData.invoiceFile) : ''} alt="Preview" className="w-full h-auto max-h-48 object-contain bg-slate-50" />
                                             <div className="absolute top-2 right-2 flex gap-2">
-                                                <a href={`data:${formData.invoiceType};base64,${formData.invoiceFile}`} download={fileName} className="bg-white/90 backdrop-blur text-emerald-700 p-2 rounded-xl shadow-sm hover:bg-emerald-50 transition-colors">
-                                                    <CheckCircle size={18} />
-                                                </a>
                                                 <button type="button" onClick={() => { setFileName(''); setFormData(prev => ({ ...prev, invoiceFile: null, invoiceName: '', invoiceType: '' })); }} className="bg-white/90 backdrop-blur text-rose-600 p-2 rounded-xl shadow-sm hover:bg-rose-50 transition-colors">
                                                     <span className="font-bold text-xs">✕</span>
                                                 </button>
@@ -458,13 +457,6 @@ const AddAsset = () => {
                                                 <span className="text-sm font-bold text-slate-700 truncate">{fileName}</span>
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
-                                                <a
-                                                    href={`data:${formData.invoiceType};base64,${formData.invoiceFile}`}
-                                                    download={fileName}
-                                                    className="text-xs font-black bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl hover:bg-slate-100 transition-colors"
-                                                >
-                                                    Download
-                                                </a>
                                                 <button type="button" onClick={() => { setFileName(''); setFormData(prev => ({ ...prev, invoiceFile: null, invoiceName: '', invoiceType: '' })); }} className="px-3 py-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-100 transition-colors">
                                                     <span className="font-bold text-xs uppercase tracking-wider">Remove</span>
                                                 </button>

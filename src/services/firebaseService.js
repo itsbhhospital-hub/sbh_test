@@ -29,6 +29,7 @@ import axios from 'axios';
 import { formatDateIST } from '../utils/dateUtils';
 
 const API_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+const UPLOAD_API_URL = API_URL;
 const MSG_API_BASE = "https://app.messageautosender.com/message/new";
 const MSG_CREDENTIALS = {
     username: "SBH HOSPITAL",
@@ -708,19 +709,80 @@ export const firebaseService = { // Primary Service Object
 
     uploadProfileImage: async (file, username) => {
         try {
-            const storageRef = ref(storage, `profiles/${username}_${Date.now()}`);
-            const snapshot = await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-
-            const userRef = doc(db, "users", username);
-            await updateDoc(userRef, {
-                ProfilePhoto: downloadURL,
-                updatedAt: serverTimestamp()
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = async () => {
+                    const base64Data = reader.result;
+                    try {
+                        const response = await fetch(UPLOAD_API_URL, {
+                            method: "POST",
+                            body: JSON.stringify({
+                                action: "uploadImage",
+                                payload: {
+                                    image: base64Data,
+                                    username: username
+                                }
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            const userRef = doc(db, "users", username);
+                            await updateDoc(userRef, {
+                                ProfilePhoto: data.data.url,
+                                updatedAt: serverTimestamp()
+                            });
+                            resolve({ status: 'success', url: data.data.url });
+                        } else {
+                            reject(new Error(data.message || "Upload failed"));
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
-
-            return { status: 'success', url: downloadURL };
         } catch (error) {
             console.error("Firebase uploadProfileImage Error:", error);
+            throw error;
+        }
+    },
+
+    uploadFileToDrive: async (file, prefixName, assetId = null, folderType = null) => {
+        try {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = async () => {
+                    const base64Data = reader.result;
+                    try {
+                        const response = await fetch(UPLOAD_API_URL, {
+                            method: "POST",
+                            body: JSON.stringify({
+                                action: "uploadAssetFile",
+                                payload: {
+                                    base64Data: base64Data,
+                                    fileName: `${prefixName}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`,
+                                    mimeType: file.type,
+                                    assetId: assetId,
+                                    folderType: folderType
+                                }
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            resolve({ status: 'success', url: data.data.url });
+                        } else {
+                            reject(new Error(data.message || "Upload failed"));
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        } catch (error) {
+            console.error("Firebase uploadFileToDrive Error:", error);
             throw error;
         }
     },
@@ -816,6 +878,7 @@ export const firebaseService = { // Primary Service Object
 
     addAsset: async (assetData) => {
         try {
+            // First, get the NEW ID so we can create the Drive folder correctly
             const newId = await runTransaction(db, async (transaction) => {
                 const counterRef = doc(db, "system", "counters");
                 const counterSnap = await transaction.get(counterRef);
@@ -829,6 +892,14 @@ export const firebaseService = { // Primary Service Object
                 return `SBH${nextNum}`;
             });
 
+            let invoiceUrl = null;
+            if (assetData.invoiceFile) {
+                // Intercept invoiceFile and upload to Drive using the upcoming ID
+                console.log(`Uploading invoice file to Drive for ${newId}...`);
+                const uploadRes = await firebaseService.uploadFileToDrive(assetData.invoiceFile, `ASSET_INVOICE`, newId, 'Invoice');
+                invoiceUrl = uploadRes.url;
+            }
+
             const finalData = {
                 ...assetData,
                 AssetID: newId,
@@ -838,6 +909,12 @@ export const firebaseService = { // Primary Service Object
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             };
+
+            // Remove raw File objects before Firestore commit
+            delete finalData.invoiceFile;
+            if (invoiceUrl) {
+                finalData.invoiceUrl = invoiceUrl;
+            }
 
             await setDoc(doc(db, "assets", newId), finalData);
 
@@ -916,10 +993,20 @@ export const firebaseService = { // Primary Service Object
         try {
             const id = assetData.AssetID || assetData.id;
             const assetRef = doc(db, "assets", id);
-            await updateDoc(assetRef, {
-                ...assetData,
-                updatedAt: serverTimestamp()
-            });
+
+            let invoiceUrl = null;
+            if (assetData.invoiceFile) {
+                console.log(`Uploading edited invoice to Drive for ${id}...`);
+                const uploadRes = await firebaseService.uploadFileToDrive(assetData.invoiceFile, `ASSET_INVOICE`, id, 'Invoice');
+                invoiceUrl = uploadRes.url;
+            }
+
+            const finalData = { ...assetData };
+            delete finalData.invoiceFile;
+            if (invoiceUrl) finalData.invoiceUrl = invoiceUrl;
+            finalData.updatedAt = serverTimestamp();
+
+            await updateDoc(assetRef, finalData);
             return { status: 'success' };
         } catch (error) {
             console.error("Firestore editAsset Error:", error);

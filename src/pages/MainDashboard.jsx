@@ -222,9 +222,9 @@ const MainDashboard = () => {
 
                 {/* 📊 TILE 2: SERVICE PULSE CHART (Medium) */}
                 <BentoCard className="md:col-span-12 lg:col-span-12 xl:col-span-5" title="Operational Trend v4.1" icon={TrendingUp}>
-                    <div className="w-full pt-4 relative mt-auto" style={{ height: '260px', minHeight: '260px' }}>
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={260}>
-                            <AreaChart data={trendStats}>
+                    <div className="w-full h-[260px] relative overflow-hidden">
+                        <ResponsiveContainer width="100%" height={260}>
+                            <AreaChart data={trendStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="gTickets" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2e7d32" stopOpacity={0.1} /><stop offset="95%" stopColor="#2e7d32" stopOpacity={0} /></linearGradient>
                                     <linearGradient id="gAssets" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient>
@@ -313,9 +313,9 @@ const MainDashboard = () => {
                 {/* 🛡️ TILE 5: ASSET DISTRIBUTION (Visual) */}
                 {(user?.Permissions?.assetsAccess !== false) && (
                     <BentoCard className="md:col-span-12 lg:col-span-4" title="Asset Condition" icon={Globe}>
-                        <div className="flex items-center mt-auto" style={{ height: '180px', minHeight: '180px' }}>
-                            <div className="w-1/2 h-full relative">
-                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={180}>
+                        <div className="flex items-center mt-auto h-[180px]">
+                            <div className="w-1/2 h-full relative overflow-hidden">
+                                <ResponsiveContainer width="100%" height={180}>
                                     <PieChart>
                                         <Pie data={healthData} innerRadius="65%" outerRadius="90%" paddingAngle={5} dataKey="value" stroke="none" isAnimationActive={false}>
                                             {healthData.map((e, i) => <Cell key={`c-${i}`} fill={e.color} />)}
@@ -372,7 +372,7 @@ const MainDashboard = () => {
                     100% { transform: translateX(-50%); }
                 }
             ` }} />
-        </div>
+        </div >
     );
 };
 

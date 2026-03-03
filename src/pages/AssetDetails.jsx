@@ -532,14 +532,19 @@ const AssetDetails = () => {
                             </div>
 
                             <div className="mt-8 pt-6 border-t border-slate-100 flex gap-4">
-                                {(asset.invoiceLink || asset.invoiceFile) && (
+                                {(asset.invoiceLink || asset.invoiceFile || asset.invoiceUrl) && (
                                     <button
                                         onClick={() => {
-                                            const url = asset.invoiceFile
+                                            const url = asset.invoiceUrl || asset.invoiceLink || (asset.invoiceFile
                                                 ? (asset.invoiceFile.startsWith('JVBERi') ? `data:application/pdf;base64,${asset.invoiceFile}` : `data:image/jpeg;base64,${asset.invoiceFile}`)
-                                                : asset.invoiceLink;
+                                                : '');
 
-                                            setPreviewFile({ open: true, url, name: asset.invoiceName || 'Purchase Invoice' });
+                                            setPreviewFile({
+                                                open: true,
+                                                url,
+                                                name: asset.invoiceName || 'Purchase Invoice',
+                                                type: asset.invoiceFileType || ''
+                                            });
                                         }}
                                         className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black uppercase tracking-wider text-slate-600 border border-slate-200 transition-colors"
                                     >
@@ -792,13 +797,18 @@ const AssetDetails = () => {
                                                         )}
 
                                                         <div className="flex items-center justify-between mt-4">
-                                                            {(record.url || record.serviceFile) ? (
+                                                            {(record.url || record.serviceFile || record.serviceUrl) ? (
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        // Depending on the structure backend saves it:
-                                                                        const fileUrl = record.url || (record.serviceFile ? `data:${record.serviceFileType || 'application/pdf'};base64,${record.serviceFile}` : '');
-                                                                        setPreviewFile({ open: true, url: fileUrl, name: recordName });
+                                                                        const fileUrl = record.url || record.serviceUrl || (record.serviceFile ? `data:${record.serviceFileType || 'application/pdf'};base64,${record.serviceFile}` : '');
+
+                                                                        setPreviewFile({
+                                                                            open: true,
+                                                                            url: fileUrl,
+                                                                            name: record.serviceFileName || recordName,
+                                                                            type: record.serviceFileType || ''
+                                                                        });
                                                                     }}
                                                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-wider text-[#2e7d32] hover:bg-emerald-50 transition-colors"
                                                                 >
@@ -833,6 +843,7 @@ const AssetDetails = () => {
                 onClose={() => setPreviewFile({ ...previewFile, open: false })}
                 fileUrl={previewFile.url}
                 fileName={previewFile.name}
+                fileType={previewFile.type}
             />
 
             {/* History Detail Modal */}
