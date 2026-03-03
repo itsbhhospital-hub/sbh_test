@@ -11,6 +11,7 @@ import QRCode from 'react-qr-code';
 import AIIntelligencePanel from '../components/AIIntelligencePanel';
 import html2canvas from 'html2canvas';
 import FilePreviewModal from '../components/FilePreviewModal';
+import { formatDateIST } from '../utils/dateUtils';
 
 const AssetDetails = () => {
     const { id } = useParams();
@@ -504,28 +505,28 @@ const AssetDetails = () => {
                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Purchase Date</p>
                                     <div className="flex items-center gap-2 text-slate-700 font-bold">
                                         <Calendar size={18} className="text-[#2e7d32]" />
-                                        {asset.purchaseDate ? new Date(asset.purchaseDate).toLocaleDateString() : 'N/A'}
+                                        {asset.purchaseDate ? formatDateIST(asset.purchaseDate) : 'N/A'}
                                     </div>
                                 </div>
                                 <div>
                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Next Service</p>
                                     <div className="flex items-center gap-2 text-slate-700 font-bold">
                                         <Clock size={18} className={asset.status === 'Service Due' ? "text-amber-500" : "text-[#2e7d32]"} />
-                                        {asset.nextServiceDate ? new Date(asset.nextServiceDate).toLocaleDateString() : 'N/A'}
+                                        {asset.nextServiceDate ? formatDateIST(asset.nextServiceDate) : 'N/A'}
                                     </div>
                                 </div>
                                 <div>
                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Warranty</p>
                                     <div className="flex items-center gap-2 text-slate-700 font-bold">
                                         <ShieldCheck size={18} className="text-[#2e7d32]" />
-                                        {asset.warrantyExpiry ? new Date(asset.warrantyExpiry).toLocaleDateString() : 'None'}
+                                        {asset.warrantyExpiry ? formatDateIST(asset.warrantyExpiry) : 'None'}
                                     </div>
                                 </div>
                                 <div>
                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">AMC Status</p>
                                     <div className="flex items-center gap-2 text-slate-700 font-bold">
                                         <Building size={18} className="text-[#2e7d32]" />
-                                        {asset.amcTaken === 'Yes' ? (asset.amcExpiry ? `Exp: ${new Date(asset.amcExpiry).toLocaleDateString()}` : 'Active') : 'No AMC'}
+                                        {asset.amcTaken === 'Yes' ? (asset.amcExpiry ? `Exp: ${formatDateIST(asset.amcExpiry)}` : 'Active') : 'No AMC'}
                                     </div>
                                 </div>
                             </div>
@@ -758,9 +759,9 @@ const AssetDetails = () => {
 
                                             const getRecordDate = (d) => {
                                                 if (!d) return 'N/A';
-                                                if (d.toDate) return d.toDate().toLocaleDateString();
-                                                if (d.seconds) return new Date(d.seconds * 1000).toLocaleDateString();
-                                                return new Date(d).toLocaleDateString();
+                                                if (d.toDate) return formatDateIST(d.toDate());
+                                                if (d.seconds) return formatDateIST(new Date(d.seconds * 1000));
+                                                return formatDateIST(new Date(d));
                                             };
 
                                             return (
@@ -859,14 +860,14 @@ const AssetDetails = () => {
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Service Date</label>
                                     <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-sm text-slate-700">
-                                        {new Date(selectedRecord.serviceDate || selectedRecord.date).toLocaleDateString('en-GB')}
+                                        {formatDateIST(selectedRecord.serviceDate || selectedRecord.date)}
                                     </div>
                                 </div>
                                 {(selectedRecord.nextServiceDate || selectedRecord.nextDate) && (
                                     <div>
                                         <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest block mb-1">Next Due</label>
                                         <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 font-bold text-sm text-emerald-800">
-                                            {new Date(selectedRecord.nextServiceDate || selectedRecord.nextDate).toLocaleDateString('en-GB')}
+                                            {formatDateIST(selectedRecord.nextServiceDate || selectedRecord.nextDate)}
                                         </div>
                                     </div>
                                 )}

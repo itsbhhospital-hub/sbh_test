@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Plus, Share2, Clock, CheckCircle, Star, ShieldCheck, User } from 'lucide-react';
+import { formatDateIST } from '../utils/dateUtils';
 
 const TicketJourneyModal = ({ isOpen, onClose, ticket, transferLogs = [], extensionLogs = [], ratingsLog = [] }) => {
     if (!isOpen || !ticket) return null;
@@ -138,7 +139,7 @@ const TicketJourneyModal = ({ isOpen, onClose, ticket, transferLogs = [], extens
                                         </span>
                                     </div>
                                     <div className="text-xs font-medium text-slate-600 leading-relaxed">{ev.subtitle}</div>
-                                    <div className="text-[10px] text-slate-400 mt-1.5 pt-1.5 border-t border-slate-200/50">{ev.date.toLocaleDateString()}</div>
+                                    <div className="text-[10px] text-slate-400 mt-1.5 pt-1.5 border-t border-slate-200/50">{formatDateIST(ev.date)}</div>
                                 </div>
                             </div>
                         ))}

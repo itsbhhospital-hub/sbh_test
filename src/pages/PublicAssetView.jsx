@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ShieldCheck, AlertTriangle, Clock, Calendar, CheckCircle, XCircle, AlertCircle, MapPin, Building, Activity, ChevronLeft } from 'lucide-react';
 import { assetsService } from '../services/assetsService';
 import QRCode from 'react-qr-code';
+import { formatDateIST } from '../utils/dateUtils';
 
 const PublicAssetView = () => {
     const { id } = useParams();
@@ -217,7 +218,7 @@ const PublicAssetView = () => {
                                 <span className="text-xs font-bold text-[#455A64] uppercase tracking-wider">Install Date</span>
                             </div>
                             <span className="text-sm font-black text-[#1C3238]">
-                                {asset.currentServiceDate ? new Date(asset.currentServiceDate).toLocaleDateString() : 'N/A'}
+                                {asset.currentServiceDate ? formatDateIST(asset.currentServiceDate) : 'N/A'}
                             </span>
                         </div>
                     </div>
@@ -238,7 +239,7 @@ const PublicAssetView = () => {
                                     {asset.warrantyStatus === 'Active' || asset.warrantyStatus === 'Expiring Soon' ? 'Valid Till' : 'Expired'}
                                 </span>
                                 <span className="text-xs font-black text-slate-700 block">
-                                    {asset.warrantyExpiry ? new Date(asset.warrantyExpiry).toLocaleDateString() : 'N/A'}
+                                    {asset.warrantyExpiry ? formatDateIST(asset.warrantyExpiry) : 'N/A'}
                                 </span>
                             </div>
                         </div>
@@ -257,7 +258,7 @@ const PublicAssetView = () => {
                                     {asset.amcStatus === 'Active' || asset.amcStatus === 'Expiring Soon' ? 'Valid Till' : 'Expired'}
                                 </span>
                                 <span className="text-xs font-black text-slate-700 block">
-                                    {asset.amcExpiry ? new Date(asset.amcExpiry).toLocaleDateString() : 'N/A'}
+                                    {asset.amcExpiry ? formatDateIST(asset.amcExpiry) : 'N/A'}
                                 </span>
                             </div>
                         </div>

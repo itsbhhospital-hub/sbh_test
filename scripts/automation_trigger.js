@@ -24,13 +24,27 @@ const MSG_CREDENTIALS = {
 // --- UTILS ---
 const getTodayStr = () => {
     const date = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
-    return date.toISOString().split('T')[0];
+    return formatToDDMMYYYY(date);
+};
+
+const formatToDDMMYYYY = (dateObj) => {
+    if (!dateObj) return 'N/A';
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const y = dateObj.getFullYear();
+    return `${d}-${m}-${y}`;
 };
 
 const startOfDate = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
+// For calendar-day checks (midnight cutoff)
 const getDaysDiff = (targetDate, baseDate = new Date()) => {
     return Math.floor((startOfDate(baseDate) - startOfDate(targetDate)) / (1000 * 60 * 60 * 24));
+};
+
+// For exact 24-hour interval checks
+const getExactDaysDiff = (targetDate, baseDate = new Date()) => {
+    return Math.floor((baseDate.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24));
 };
 
 const parseDateSafe = (d) => {
@@ -237,8 +251,8 @@ async function processComplaints(todayStr) {
         let currentEscalation = c.escalationLevel || 0;
         let sentReminder = false;
 
-        // NO ACTIVITY RULE
-        const inactiveDays = getDaysDiff(lastActivity);
+        // NO ACTIVITY RULE (Exact 24-hour boundaries)
+        const inactiveDays = getExactDaysDiff(lastActivity);
         if (inactiveDays > 2) {
             if (currentEscalation < 2) currentEscalation++;
         }
@@ -246,11 +260,11 @@ async function processComplaints(todayStr) {
         // --- CORE TIME LOGIC ---
         if (extendDate) {
             const diffFromExtend = getDaysDiff(extendDate);
-            const totalDelay = getDaysDiff(regDate);
+            const totalDelay = getExactDaysDiff(regDate);
 
             if (diffFromExtend === -1 || diffFromExtend === 0) {
                 // Pre-extension or On Date
-                const text = `⏳ *EXTENDED DEADLINE UPCOMING*\n\nCase ID: ${c.ID}\nExtended Due: ${extendDate.toISOString().split('T')[0]}\nPlease ensure resolution today.\n\n*SBH Group of Hospitals*`;
+                const text = `⏳ *EXTENDED DEADLINE UPCOMING*\n\nCase ID: ${c.ID}\nExtended Due: ${formatToDDMMYYYY(extendDate)}\nPlease ensure resolution today.\n\n*SBH Group of Hospitals*`;
                 await sendToLevel('user', text, c.Department, c.AssignedTo);
                 sentReminder = true;
             }
@@ -262,7 +276,7 @@ async function processComplaints(todayStr) {
             else if (diffFromExtend === 3 || diffFromExtend === 4) {
                 // Day 3 & 4 Overdue -> L2
                 currentEscalation = Math.max(currentEscalation, 1);
-                await sendToLevel('l2', TPL_L2_ESCALATION(c, totalDelay, lastActivity.toISOString().split('T')[0]), c.Department);
+                await sendToLevel('l2', TPL_L2_ESCALATION(c, totalDelay, formatToDDMMYYYY(lastActivity)), c.Department);
                 sentReminder = true;
             }
             else if (diffFromExtend >= 5) {
@@ -273,7 +287,7 @@ async function processComplaints(todayStr) {
             }
 
         } else {
-            const delayDays = getDaysDiff(regDate);
+            const delayDays = getExactDaysDiff(regDate);
 
             if (delayDays > 0) {
                 if (delayDays >= 1 && delayDays <= 3) {
@@ -282,7 +296,7 @@ async function processComplaints(todayStr) {
                 }
                 else if (delayDays === 4 || delayDays === 5) {
                     currentEscalation = Math.max(currentEscalation, 1);
-                    await sendToLevel('l2', TPL_L2_ESCALATION(c, delayDays, lastActivity.toISOString().split('T')[0]), c.Department);
+                    await sendToLevel('l2', TPL_L2_ESCALATION(c, delayDays, formatToDDMMYYYY(lastActivity)), c.Department);
                     sentReminder = true;
                 }
                 else if (delayDays >= 6) {
@@ -298,7 +312,7 @@ async function processComplaints(todayStr) {
             if (sentReminder) updates.lastReminderSentDate = todayStr;
             updates.updatedAt = serverTimestamp();
 
-            if (getDaysDiff(regDate) > 0 && c.Delay !== 'Yes') updates.Delay = 'Yes';
+            if (getExactDaysDiff(regDate) > 0 && c.Delay !== 'Yes') updates.Delay = 'Yes';
 
             batch.update(docSnap.ref, updates);
             dirtyCount++;
@@ -347,7 +361,7 @@ async function processAssets(todayStr) {
         // SERVICE
         if (srvDate) {
             const diff = getDaysDiff(srvDate);
-            const dStr = srvDate.toISOString().split('T')[0];
+            const dStr = formatToDDMMYYYY(srvDate);
             if (diff === -3 || diff === 0) {
                 const text = `🔧 *UPCOMING SERVICE*\n\nAsset ID: ${a.AssetID}\nService Due: ${dStr}\n\n*SBH Group of Hospitals*`;
                 await sendToLevel('user', text, a.Department, a.assignedTo);

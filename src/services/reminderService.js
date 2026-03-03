@@ -135,10 +135,10 @@ export const reminderService = {
                     message = `🚨 *URGENT: DELAY ALERT* 🏥\n\nThe following case is pending and requires immediate attention.\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n⏳ *Status:* Overdue since yesterday\n\nKindly address this case now.${footer}`;
                 } else if (daysOverdue === 2) {
                     alertType = "L2_ESCALATION";
-                    message = `🚩 *LEVEL 2 ESCALATION* 🏥\n\nManagement Attention Required,\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n⏳ *Pending Since:* ${daysOverdue} days\n📅 *Created On:* ${new Date(data.Date).toLocaleDateString()}\n\nKindly intervene for immediate resolution.${footer}`;
+                    message = `🚩 *LEVEL 2 ESCALATION* 🏥\n\nManagement Attention Required,\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n⏳ *Pending Since:* ${daysOverdue} days\n📅 *Created On:* ${formatDateIST(data.Date)}\n\nKindly intervene for immediate resolution.${footer}`;
                 } else if (daysOverdue >= 3) {
                     alertType = "L1_DIRECTOR_ESCALATION";
-                    message = `🚨 *DIRECTORATE LEVEL ESCALATION* 🏥\n\nRespected Sir,\nThis ticket has reached critical delay status.\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n⏳ *Overdue:* ${daysOverdue} days\n📅 *Registered:* ${new Date(data.Date).toLocaleDateString()}\n\nRequested for your direct intervention.${footer}`;
+                    message = `🚨 *DIRECTORATE LEVEL ESCALATION* 🏥\n\nRespected Sir,\nThis ticket has reached critical delay status.\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n⏳ *Overdue:* ${daysOverdue} days\n📅 *Registered:* ${formatDateIST(data.Date)}\n\nRequested for your direct intervention.${footer}`;
                 }
 
                 if (message) {

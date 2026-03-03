@@ -42,12 +42,10 @@ export const formatDateIST = (dateInput) => {
     try {
         const date = parseCustomDate(dateInput);
         if (!date || isNaN(date.getTime())) return '-';
-        return new Intl.DateTimeFormat('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        }).format(date);
+        const d = String(date.getDate()).padStart(2, '0');
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const y = date.getFullYear();
+        return `${d}-${m}-${y}`;
     } catch (e) {
         return '-';
     }

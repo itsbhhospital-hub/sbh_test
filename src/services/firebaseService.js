@@ -26,6 +26,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db, storage } from "./firebaseConfig";
 import { runTransaction } from "firebase/firestore";
 import axios from 'axios';
+import { formatDateIST } from '../utils/dateUtils';
 
 const API_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 const MSG_API_BASE = "https://app.messageautosender.com/message/new";
@@ -986,8 +987,8 @@ export const firebaseService = { // Primary Service Object
                 const alertType = record.serviceType || record.type || 'SERVICE';
                 const alertDetails = record.remark || record.details || 'N/A';
                 const alertCost = record.cost || '0';
-                const alertDate = record.serviceDate || record.date || new Date().toISOString().split('T')[0];
-                const alertNext = record.nextServiceDate || 'N/A';
+                const alertDate = record.serviceDate ? formatDateIST(record.serviceDate) : (record.date ? formatDateIST(record.date) : formatDateIST(new Date()));
+                const alertNext = record.nextServiceDate ? formatDateIST(record.nextServiceDate) : 'N/A';
 
                 const message = `*🔧 ASSET SERVICE RECORD* 🏥\n\n🆔 *Asset ID:* ${assetId}\n🛠️ *Type:* ${alertType.toUpperCase()}\n\n📝 *Details:* ${alertDetails}\n💰 *Cost:* ₹${alertCost}\n📅 *Date:* ${alertDate}\n🔧 *Next Service:* ${alertNext}${footer}`;
 

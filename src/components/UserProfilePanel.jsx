@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useIntelligence } from '../context/IntelligenceContext';
 import ImageCropper from './ImageCropper';
 import SuccessPopup from './SuccessPopup';
+import { formatIST, formatDateIST } from '../utils/dateUtils';
 
 const UserProfilePanel = ({ user: targetUser, onClose, onUpdate, onDelete }) => {
     const { user: currentUser } = useAuth();
@@ -449,7 +450,7 @@ const UserProfilePanel = ({ user: targetUser, onClose, onUpdate, onDelete }) => 
                                         <p className="text-[11px] font-black text-[#1f2d2a] truncate uppercase">
                                             {(formData.LastLogin === 'Never Logged In' || !formData.LastLogin)
                                                 ? 'Never Logged In'
-                                                : new Date(formData.LastLogin).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                                : formatIST(formData.LastLogin)
                                             }
                                         </p>
                                     </div>
@@ -527,7 +528,7 @@ const UserProfilePanel = ({ user: targetUser, onClose, onUpdate, onDelete }) => 
                                                 <div key={idx} className="p-4 bg-white border border-emerald-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
                                                     <div className="flex justify-between items-start mb-2">
                                                         <span className="text-[11px] font-black text-slate-800 tracking-tight">#{log.ComplaintID}</span>
-                                                        <span className="text-[9px] font-black text-slate-400 uppercase">{new Date(log.TransferDate).toLocaleDateString()}</span>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase">{formatDateIST(log.TransferDate)}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 mb-3">
                                                         <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[9px] font-black uppercase">{log.FromDepartment}</span>

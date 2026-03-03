@@ -9,6 +9,7 @@ import { Activity, CheckCircle, AlertCircle, Clock, Plus, History, Shield, Users
 import { Link } from 'react-router-dom';
 import DirectorDashboard from '../components/Analytics/DirectorDashboard';
 import { normalize } from '../utils/dataUtils';
+import { formatDateIST } from '../utils/dateUtils';
 import { useIntelligence } from '../context/IntelligenceContext';
 import WorkloadHeatmap from '../components/AI/WorkloadHeatmap';
 import RiskPredictionPanel from '../components/AI/RiskPredictionPanel';
@@ -158,7 +159,7 @@ const Dashboard = () => {
 
         // 1. DELAY POPUP (Daily Logic)
         const checkDelay = () => {
-            const todayStr = new Date().toLocaleDateString();
+            const todayStr = formatDateIST(new Date());
             const lastSeenDate = localStorage.getItem(`delay_alert_date_${user.Username}`);
 
             if (lastSeenDate === todayStr) return;
@@ -197,7 +198,7 @@ const Dashboard = () => {
 
             const uDept = normalize(user.Department);
             const uName = normalize(user.Username);
-            const todayStr = new Date().toLocaleDateString();
+            const todayStr = formatDateIST(new Date());
 
             // Daily Limit Check
             const shownDate = localStorage.getItem(`booster_shown_date_${user.Username}`);
@@ -423,7 +424,7 @@ const Dashboard = () => {
                                 <div className="flex flex-col gap-2">
                                     <button
                                         onClick={() => {
-                                            const todayStr = new Date().toLocaleDateString();
+                                            const todayStr = formatDateIST(new Date());
                                             localStorage.setItem(`delay_alert_date_${user.Username}`, todayStr);
                                             setDelayAlert(null);
                                             setActiveFilter('Delayed');
@@ -435,7 +436,7 @@ const Dashboard = () => {
                                     </button>
                                     <button
                                         onClick={() => {
-                                            const todayStr = new Date().toLocaleDateString();
+                                            const todayStr = formatDateIST(new Date());
                                             localStorage.setItem(`delay_alert_date_${user.Username}`, todayStr);
                                             setDelayAlert(null);
                                         }}
@@ -516,7 +517,7 @@ const Dashboard = () => {
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => {
-                                            const todayStr = new Date().toLocaleDateString();
+                                            const todayStr = formatDateIST(new Date());
                                             localStorage.setItem(`booster_shown_date_${user.Username}`, todayStr);
                                             setBoosterNotice(null);
                                         }}
@@ -526,7 +527,7 @@ const Dashboard = () => {
                                     </button>
                                     <button
                                         onClick={() => {
-                                            const todayStr = new Date().toLocaleDateString();
+                                            const todayStr = formatDateIST(new Date());
                                             localStorage.setItem(`booster_shown_date_${user.Username}`, todayStr);
                                             setBoosterNotice(null);
                                             setTrackTicket(boosterNotice.TicketID);
