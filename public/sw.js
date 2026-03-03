@@ -35,8 +35,9 @@ self.addEventListener('activate', (event) => {
 
 // CLEAN & ROBUST FETCH STRATEGY
 self.addEventListener('fetch', (event) => {
-    // Only handle GET requests for local or static assets
+    // Only handle GET requests and valid HTTP/HTTPS schemes
     if (event.request.method !== 'GET') return;
+    if (!event.request.url.startsWith('http')) return;
 
     const url = new URL(event.request.url);
     const isLocal = url.origin === self.location.origin;
@@ -47,9 +48,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             const fetchPromise = fetch(event.request).then((networkResponse) => {
-                if (networkResponse && networkResponse.ok) {
+                // Ensure response is valid and is not a partial/opaque response (status 200)
+                if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
                     const cacheCopy = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, cacheCopy).catch(err => console.warn('Cache Put Error:', err));
+                    });
                 }
                 return networkResponse;
             }).catch(() => {
