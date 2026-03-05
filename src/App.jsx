@@ -16,7 +16,6 @@ import { App as CapacitorApp } from '@capacitor/app';
 import MainDashboard from './pages/MainDashboard';
 import PageLoader from './components/PageLoader';
 import MobileWelcome from './components/MobileWelcome';
-import ReminderEngine from './components/ReminderEngine';
 import AssetsPanel from './pages/AssetsPanel';
 import DirectorDashboard from './pages/DirectorDashboard';
 import AddAsset from './pages/AddAsset';
@@ -162,7 +161,6 @@ function App() {
       <Providers>
         <HardwareBackButtonHandler />
         <MobileWelcome />
-        <ReminderEngine />
         <GlobalLoader />
         <Routes>
           <Route path="/login" element={<Login />} />
