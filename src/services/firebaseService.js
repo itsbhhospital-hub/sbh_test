@@ -620,7 +620,7 @@ export const firebaseService = { // Primary Service Object
         }
     },
 
-    extendComplaint: async (id, date, reason) => {
+    extendComplaint: async (id, date, reason, username, oldDate) => {
         try {
             const complaintRef = doc(db, "complaints", id);
             await updateDoc(complaintRef, {
@@ -629,6 +629,35 @@ export const firebaseService = { // Primary Service Object
                 Remark: reason || "",
                 LastUpdated: new Date().toISOString()
             });
+
+            // 1. Log to extension_logs collection for the Super Admin
+            await addDoc(collection(db, "extension_logs"), {
+                ComplaintID: id,
+                ExtendedBy: username || "System",
+                OldTargetDate: oldDate || "N/A",
+                NewTargetDate: date,
+                Reason: reason || "Operational Requirement",
+                ExtensionDate: new Date().toISOString(),
+                createdAt: serverTimestamp()
+            });
+
+            // 2. WhatsApp Notification
+            try {
+                const ticketSnap = await getDoc(complaintRef);
+                if (ticketSnap.exists()) {
+                    const ticketData = ticketSnap.data();
+                    const reporter = await exports.default.getUserMobile(ticketData.ReportedBy);
+
+                    if (reporter && reporter.mobile) {
+                        const footer = "\n\nSBH CMS - AI Automated Alert";
+                        const message = `📅 *TIMELINE EXTENDED* 🏥\n\nCompletion target for your ticket has been updated.\n\n🎫 *Ticket ID:* ${id}\n👤 *Authorized By:* ${username || 'System'}\n⏰ *New Target:* ${date || 'N/A'}\n📝 *Reason:* ${reason || 'Operational Requirement'}${footer}`;
+                        sendWhatsApp(reporter.mobile, reporter.name, message);
+                    }
+                }
+            } catch (notifyErr) {
+                console.warn("Failed to send Extend WhatsApp alert:", notifyErr);
+            }
+
             return { status: 'success' };
         } catch (error) {
             console.error("Firestore extendComplaint Error:", error);

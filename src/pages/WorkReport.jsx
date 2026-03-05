@@ -23,6 +23,7 @@ const WorkReport = () => {
     // We still need local state for search/selection
     const [selectedUser, setSelectedUser] = React.useState(null);
     const [searchTerm, setSearchTerm] = React.useState('');
+    const [historyFilter, setHistoryFilter] = React.useState('Solved');
 
     // Merge User Data with Intelligence Stats
     const userMetrics = React.useMemo(() => {
@@ -42,6 +43,7 @@ const WorkReport = () => {
                     avgSpeed: parseFloat(stats.avgSpeed || 0),
                     efficiency: parseFloat(stats.efficiency || 0),
                     delayed: parseInt(stats.delayed || 0),
+                    extended: parseInt(stats.extended || 0),
                     // total: parseInt(stats.total || 0), // Not strictly needed for display but good to have
                     breakdown: {
                         5: parseInt(stats.R5 || 0),
@@ -81,7 +83,7 @@ const WorkReport = () => {
                                 <button onClick={() => navigate('/')} className="flex items-center gap-2 text-[#2e7d32] hover:bg-white px-4 py-2 rounded-xl transition-all font-bold text-sm border border-[#2e7d32]/20">
                                     <ArrowRight className="rotate-180" size={16} /> Dashboard
                                 </button>
-                                <button onClick={() => setSelectedUser(null)} className="flex items-center gap-2 text-slate-500 hover:text-[#2e7d32] font-bold text-sm transition-colors">
+                                <button onClick={() => { setSelectedUser(null); setHistoryFilter('Solved'); }} className="flex items-center gap-2 text-slate-500 hover:text-[#2e7d32] font-bold text-sm transition-colors">
                                     / Staff List
                                 </button>
                             </div>
@@ -105,7 +107,10 @@ const WorkReport = () => {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-8 -mt-8 relative z-10">
                         {/* 1. Solved Cases */}
-                        <div className="bg-white p-6 rounded-2xl border border-[#dcdcdc] transition-all group">
+                        <div
+                            onClick={() => setHistoryFilter('Solved')}
+                            className={`bg-white p-6 rounded-2xl border transition-all group cursor-pointer ${historyFilter === 'Solved' ? 'border-[#2e7d32] shadow-md' : 'border-[#dcdcdc] hover:border-[#2e7d32]'}`}
+                        >
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-4">Total Impact</p>
                             <div className="flex items-end justify-between">
                                 <h4 className="text-4xl font-bold text-[#1f2d2a] leading-none tracking-tighter">{selectedUser.stats.resolved}</h4>
@@ -144,9 +149,9 @@ const WorkReport = () => {
                     </div>
 
                     {/* Performance Deep Dive */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-8 pt-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-8 pt-0">
                         {/* Rating Breakdown */}
-                        <div className="bg-white p-6 rounded-2xl border border-[#dcdcdc] col-span-1">
+                        <div className="bg-white p-6 rounded-2xl border border-[#dcdcdc] col-span-1 lg:col-span-2">
                             <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <Star size={16} className="text-amber-400" /> User Satisfaction
                             </h4>
@@ -173,7 +178,10 @@ const WorkReport = () => {
 
                         {/* Efficiency Factors */}
                         <div className="bg-white p-6 rounded-2xl border border-[#dcdcdc] col-span-1 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div className="bg-rose-50 p-4 rounded-xl border border-rose-100">
+                            <div
+                                onClick={() => setHistoryFilter('Delayed')}
+                                className={`p-4 rounded-xl border transition-all cursor-pointer ${historyFilter === 'Delayed' ? 'bg-rose-100 border-rose-300 shadow-md' : 'bg-rose-50 border-rose-100 hover:border-rose-300'}`}
+                            >
                                 <div className="flex justify-between items-start mb-2">
                                     <h5 className="text-[10px] font-black text-rose-800 uppercase tracking-wider">Delayed Resolutions</h5>
                                     <AlertTriangle size={18} className="text-rose-500" />
@@ -182,13 +190,16 @@ const WorkReport = () => {
                                 <p className="text-[11px] text-rose-700/60 font-medium">Cases exceeding target response threshold.</p>
                             </div>
 
-                            <div className="bg-[#cfead6] p-4 rounded-xl border border-[#2e7d32]/10">
+                            <div
+                                onClick={() => setHistoryFilter('Extended')}
+                                className={`p-4 rounded-xl border transition-all cursor-pointer ${historyFilter === 'Extended' ? 'bg-blue-100 border-blue-300 shadow-md' : 'bg-blue-50 border-blue-100 hover:border-blue-300'}`}
+                            >
                                 <div className="flex justify-between items-start mb-2">
-                                    <h5 className="text-[10px] font-black text-[#2e7d32] uppercase tracking-wider">Active Performance</h5>
-                                    <Clock size={18} className="text-[#2e7d32]" />
+                                    <h5 className="text-[10px] font-black text-blue-800 uppercase tracking-wider">Extended Cases</h5>
+                                    <History size={18} className="text-blue-500" />
                                 </div>
-                                <p className="text-3xl font-black text-[#2e7d32] mb-1">{Math.round((selectedUser.stats.efficiency - ((Number(selectedUser.stats.avgRating) / 5) * 50)) * 2) / 2 || 0}</p>
-                                <p className="text-[11px] text-[#2e7d32]/60 font-medium">Efficiency score weightage based on speed.</p>
+                                <p className="text-3xl font-black text-blue-600 mb-1">{selectedUser.stats.extended}</p>
+                                <p className="text-[11px] text-blue-700/60 font-medium">Cases with timeline boundary modifications.</p>
                             </div>
                         </div>
                     </div>
@@ -200,7 +211,8 @@ const WorkReport = () => {
                         </h3>
                         <ComplaintList
                             customResolver={selectedUser.Username}
-                            initialFilter="Solved"
+                            initialFilter={historyFilter}
+                            key={historyFilter} // Force remount if filter changes
                         />
                     </div>
                 </div>

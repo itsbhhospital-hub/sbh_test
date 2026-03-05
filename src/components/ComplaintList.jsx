@@ -388,6 +388,8 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                     const isClosed = doneStatuses.includes(normalize(t.Status));
                     return isSuperAdmin || !isClosed;
                 });
+            } else if (filter === 'Extended') {
+                filtered = filtered.filter(t => normalize(t.Status) === 'extended' || normalize(t.Status) === 'extend');
             } else {
                 filtered = filtered.filter(t => String(t.Status).toLowerCase() === String(filter).toLowerCase());
             }
@@ -467,7 +469,7 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                 );
                 setSuccessMessage(`Ticket #${ticketId} successfully transferred to ${data.dept}.`);
             } else if (action === 'Extend') {
-                await firebaseService.extendComplaint(ticketId, data.date, data.reason);
+                await firebaseService.extendComplaint(ticketId, data.date, data.reason, user.Username, selectedComplaint.TargetDate || selectedComplaint.Date);
                 setSuccessMessage(`Ticket #${ticketId} extended successfully. New date: ${data.date}`);
             } else if (action === 'Resolve' || action === 'Close' || action === 'Force Close') {
                 const finalRemark = action === 'Force Close' && !data.remark
@@ -589,7 +591,7 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                 </div>
 
                 <div className="flex gap-1.5 p-2.5 bg-[#f8faf9] overflow-x-auto no-scrollbar border-b border-transparent">
-                    {['All', 'Open', 'Pending', 'Solved', 'Transferred', 'Delayed'].map(f => (
+                    {['All', 'Open', 'Pending', 'Extended', 'Solved', 'Transferred', 'Delayed'].map(f => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
@@ -800,9 +802,9 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                                         extensions.forEach(e => {
                                             events.push({
                                                 type: 'extension',
-                                                date: parse(e.ExtensionDate || e.Date || e.Timestamp),
+                                                date: parse(e.ExtensionDate || e.Date || e.Timestamp || e.ExtensionTime),
                                                 title: 'Timeline Authorized',
-                                                subtitle: `Extended to ${e.NewTargetDate} (${e.Reason})`,
+                                                subtitle: `Extended to ${e.NewTargetDate || e.TargetDate} by ${e.ExtendedBy || 'System'} (${e.Reason})`,
                                                 icon: <Clock size={10} />,
                                                 color: 'amber'
                                             });
@@ -1002,12 +1004,19 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                             )}
 
                             {!actionMode && (() => {
-                                const isTrueOwner = isAdmin || String(user.Department || '').toLowerCase() === String(selectedComplaint.Department || '').toLowerCase();
+                                // Admin can see all actions
+                                const isGlobalAdmin = isAdmin;
+                                // Dept staff can see actions if it belongs to their dept
+                                const isAssignedDept = String(user.Department || '').toLowerCase() === String(selectedComplaint.Department || '').toLowerCase();
+                                // Reporter can ALWAYS rate and reopen, even if it's assigned to someone else
+                                const isReporter = String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase();
 
-                                return isTrueOwner ? (
+                                const canViewActions = isGlobalAdmin || isAssignedDept || isReporter;
+
+                                return canViewActions ? (
                                     <div className="flex flex-wrap gap-3">
-                                        {/* BOOSTER SYSTEM BUTTON */}
-                                        {isAdmin && !['closed', 'resolved', 'force close'].includes(selectedComplaint.Status?.toLowerCase()) && (
+                                        {/* BOOSTER SYSTEM BUTTON - Admins Only */}
+                                        {isGlobalAdmin && !['closed', 'resolved', 'force close'].includes(selectedComplaint.Status?.toLowerCase()) && (
                                             <button
                                                 onClick={() => setActionMode('Booster')}
                                                 className="w-full py-4 bg-amber-50 text-amber-600 font-black rounded-2xl border border-amber-100 hover:bg-amber-100 active:scale-[0.98] transition-all shadow-none flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest mb-1"
@@ -1016,19 +1025,26 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                                             </button>
                                         )}
 
-                                        {['open', 'transferred', 'pending', 'extended', 'delayed'].includes(String(selectedComplaint.Status).toLowerCase()) && (
+                                        {/* RESOLVE / EXTEND / TRANSFER - Admin or Assigned Dept Only */}
+                                        {(isGlobalAdmin || isAssignedDept) && ['open', 'transferred', 'pending', 'extended', 'delayed'].includes(String(selectedComplaint.Status).toLowerCase()) && (
                                             <>
                                                 <button onClick={() => setActionMode('Resolve')} className="flex-1 py-4 bg-[#2e7d32] text-white font-black rounded-2xl shadow-none hover:bg-[#256628] active:scale-[0.98] transition-all uppercase text-[10px] tracking-widest">Mark as Resolved</button>
                                                 <button onClick={() => setActionMode('Extend')} className="flex-1 py-4 bg-white text-[#1f2d2a] font-black rounded-2xl border border-[#dcdcdc] hover:bg-[#f8faf9] active:scale-[0.98] transition-all uppercase text-[10px] tracking-widest">Extend</button>
                                                 <button onClick={() => setActionMode('Transfer')} className="w-full py-4 bg-[#1f2d2a] text-[#2e7d32] font-black rounded-2xl border border-[#2e7d32]/10 hover:bg-black active:scale-[0.98] transition-all shadow-none uppercase text-[10px] tracking-widest">Transfer to Another Dept</button>
                                             </>
                                         )}
-                                        {['closed', 'resolved'].includes(String(selectedComplaint.Status).toLowerCase()) && !selectedComplaint.Rating && !hasImmutableRating(selectedComplaint.ID) && String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase() && (
+
+                                        {/* RATE - Reporter Only */}
+                                        {['closed', 'resolved'].includes(String(selectedComplaint.Status).toLowerCase()) && !selectedComplaint.Rating && !hasImmutableRating(selectedComplaint.ID) && isReporter && (
                                             <button onClick={() => setActionMode('Rate')} className="flex-1 py-4 bg-[#2e7d32] text-white font-black rounded-2xl hover:bg-[#256628] transition-all shadow-none active:scale-[0.98] uppercase tracking-widest text-[10px]">Rate This Service</button>
                                         )}
-                                        {String(selectedComplaint.Status).toLowerCase() === 'closed' && canReopen(selectedComplaint) && String(selectedComplaint.ReportedBy || '').toLowerCase() === String(user.Username || '').toLowerCase() && (
+
+                                        {/* RE-OPEN - Reporter Only */}
+                                        {String(selectedComplaint.Status).toLowerCase() === 'closed' && canReopen(selectedComplaint) && isReporter && (
                                             <button onClick={() => setActionMode('Re-open')} className="flex-1 py-4 bg-white text-rose-600 font-black rounded-2xl border border-rose-100 hover:bg-rose-50 active:scale-[0.98] transition-all shadow-none uppercase text-[10px] tracking-widest">Re-open Ticket</button>
                                         )}
+
+                                        {/* FORCE CLOSE - Super Admin Only */}
                                         {isSuperAdmin && selectedComplaint.Status !== 'Closed' && selectedComplaint.Status !== 'Force Close' && (
                                             <button onClick={() => setActionMode('Force Close')} className="w-full py-4 bg-rose-50 text-rose-600 font-black rounded-2xl border border-rose-100 hover:bg-rose-100 active:scale-[0.98] transition-all shadow-none flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest">
                                                 <Shield size={16} /> Force Close Case (Super Admin)
@@ -1039,6 +1055,7 @@ const ComplaintList = ({ onlyMyComplaints = false, onlySolvedByMe = false, custo
                                     <div className="w-full py-4 bg-[#f8faf9] rounded-2xl border border-[#dcdcdc] flex items-center justify-center gap-2 text-slate-400">
                                         <Shield size={16} />
                                         <span className="text-[10px] font-black uppercase tracking-widest">Read Only View Mode</span>
+                                        <span className="text-[9px] font-bold tracking-tight bg-white px-2 py-0.5 rounded-lg border border-slate-200 ml-2">Assigned to {selectedComplaint.Department}</span>
                                     </div>
                                 );
                             })()}

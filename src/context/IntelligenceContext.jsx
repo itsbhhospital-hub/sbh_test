@@ -220,11 +220,16 @@ export const IntelligenceProvider = ({ children }) => {
                     if (isSuperAdmin || isMe) personalFlow.pending++;
                 }
 
-                const hasTargetDate = t.TargetDate && String(t.TargetDate).trim() !== '' && String(t.TargetDate).toLowerCase() !== 'none';
-                if (status === 'extended' || status === 'extend' || hasTargetDate) {
+                if (status === 'extended' || status === 'extend') {
                     depts[dept].extended++;
                     globalFlow.extended++;
                     if (isSuperAdmin || isMe) personalFlow.extended++;
+
+                    // Allow WorkReport to read extended count per user
+                    if (resolver) {
+                        const s = initStaff(resolver);
+                        if (s) s.extended = (s.extended || 0) + 1;
+                    }
                 }
 
                 if (isDelayed) {

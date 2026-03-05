@@ -38,7 +38,7 @@ const ExtendedCases = () => {
         }
     };
 
-    const isAdmin = user?.Role?.toUpperCase() === 'SUPER_ADMIN' || user?.Role?.toUpperCase() === 'ADMIN';
+    const isAdmin = ['super_admin', 'superadmin', 'admin'].includes(normalize(user?.Role)) || normalize(user?.Username) === 'amsir' || user?.Username === 'AM Sir';
 
     // Filter Logic
     const filteredLogs = logs.filter(log => {

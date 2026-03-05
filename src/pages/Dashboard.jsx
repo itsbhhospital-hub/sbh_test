@@ -144,8 +144,7 @@ const Dashboard = () => {
             // For open tickets, if they or Admin transferred it, count it
             if (normalize(t.TransferredBy) === uName || hasEverTransferred) initial.transferred++;
 
-            const hasTargetDate = t.TargetDate && String(t.TargetDate).trim() !== '' && String(t.TargetDate).toLowerCase() !== 'none';
-            if (status === 'extended' || status === 'extend' || hasTargetDate) initial.extended++;
+            if (status === 'extended' || status === 'extend') initial.extended++;
 
             const regTime = t.Date ? new Date(t.Date).getTime() : 0;
             const isDelayed = !isClosed && (normalize(t.Delay) === 'yes' || status === 'delayed' || (regTime > 0 && regTime < startOfToday));
@@ -307,8 +306,7 @@ const Dashboard = () => {
                     result.push(t);
                 }
             } else if (popupCategory === 'Extended') {
-                const hasTargetDate = t.TargetDate && String(t.TargetDate).trim() !== '' && String(t.TargetDate).toLowerCase() !== 'none';
-                if (status === 'extended' || status === 'extend' || hasTargetDate) result.push(t);
+                if (status === 'extended' || status === 'extend') result.push(t);
             } else if (popupCategory === 'Transferred') {
                 const hasEverTransferred = t.TransferDate || t.TransferredBy || t.LatestTransfer || status === 'transferred';
                 if (hasEverTransferred) {
