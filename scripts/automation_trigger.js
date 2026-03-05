@@ -117,33 +117,66 @@ This case requires urgent intervention.
 *SBH Group of Hospitals*
 *Central Monitoring Authority*`;
 
-const TPL_ASSET_SERVICE = (a, overdueDays, date) => `🔧 *ASSET SERVICE OVERDUE*
+const TPL_ASSET_SERVICE = (a, overdueDays, date, status) => {
+    const isOverdue = overdueDays > 0;
+    const title = isOverdue ? `🚨 *SERVICE OVERDUE ALERT*` : `🔧 *UPCOMING SERVICE REMINDER*`;
 
-🔹 Asset ID: ${a.AssetID}
-🏢 Department: ${a.Department || a.location || 'Unknown'}
-📅 Service Due: ${date || 'N/A'}
-⏳ Overdue: ${overdueDays} Days
+    return `${title}
 
-Immediate action required.
+🔹 *Asset:* ${a.machineName || 'Unknown Device'}  (ID: ${a.AssetID})
+🏢 *Department:* ${a.Department || a.location || 'N/A'}
+📅 *Service Date:* ${date}
+⏳ *Status:* ${isOverdue ? `Overdue by ${overdueDays} Days` : `Due in ${Math.abs(overdueDays)} Days`}
 
-—
-*SBH Group of Hospitals*
-*Automated Asset Monitoring*`;
-
-const TPL_ASSET_CRITICAL = (a) => `🚨 *CRITICAL ALERT*
-
-🔹 Asset ID: ${a.AssetID}
-🏢 Department: ${a.Department || a.location || 'Unknown'}
-📅 Warranty Expired: ${a.warrantyExpiry || 'N/A'}
-📅 AMC Expired: ${a.amcExpiry || 'N/A'}
-
-Asset is unprotected.
-
-Immediate renewal required.
+Please ensure maintenance is scheduled promptly to avoid operational delays.
 
 —
 *SBH Group of Hospitals*
-*Risk Prevention System*`;
+*Automated Asset Control System*`;
+};
+
+const TPL_ASSET_WARRANTY = (a, overdueDays, date, hasAmc) => {
+    const isOverdue = overdueDays > 0;
+    const title = isOverdue ? `⚠️ *WARRANTY EXPIRED*` : `🛡️ *WARRANTY EXPIRING SOON*`;
+
+    let supportAction = "";
+    if (isOverdue) {
+        supportAction = hasAmc ? `✅ *AMC Coverage:* Active. Device remains protected under AMC.` : `🔴 *Action Required:* Asset is unprotected. Please initiate AMC contract immediately.`;
+    } else {
+        supportAction = `ℹ️ *Note:* Please review AMC requirements before expiration.`;
+    }
+
+    return `${title}
+
+🔹 *Asset:* ${a.machineName || 'Unknown Device'}  (ID: ${a.AssetID})
+🏢 *Department:* ${a.Department || a.location || 'N/A'}
+📅 *Warranty Date:* ${date}
+⏳ *Status:* ${isOverdue ? `Expired ${overdueDays} Days Ago` : `Expires in ${Math.abs(overdueDays)} Days`}
+
+${supportAction}
+
+—
+*SBH Group of Hospitals*
+*Automated Asset Control System*`;
+};
+
+const TPL_ASSET_AMC = (a, overdueDays, date) => {
+    const isOverdue = overdueDays > 0;
+    const title = isOverdue ? `⚠️ *AMC EXPIRED*` : `🛡️ *AMC EXPIRING SOON*`;
+
+    return `${title}
+
+🔹 *Asset:* ${a.machineName || 'Unknown Device'}  (ID: ${a.AssetID})
+🏢 *Department:* ${a.Department || a.location || 'N/A'}
+📅 *AMC Date:* ${date}
+⏳ *Status:* ${isOverdue ? `Expired ${overdueDays} Days Ago` : `Expires in ${Math.abs(overdueDays)} Days`}
+
+🔴 *Action Required:* Asset is unprotected. Please renew AMC contract immediately.
+
+—
+*SBH Group of Hospitals*
+*Automated Asset Control System*`;
+};
 
 // Fetching Users cache
 let allUsers = [];
@@ -358,21 +391,22 @@ async function processAssets(todayStr) {
             sentReminder = true;
         }
 
-        // SERVICE
+        // SERVICE CHECK
         if (srvDate) {
             const diff = getDaysDiff(srvDate);
             const dStr = formatToDDMMYYYY(srvDate);
+            // Remind 3 Days Before, and On Day 0
             if (diff === -3 || diff === 0) {
-                const text = `🔧 *UPCOMING SERVICE*\n\nAsset ID: ${a.AssetID}\nService Due: ${dStr}\n\n*SBH Group of Hospitals*`;
-                await sendToLevel('user', text, a.Department, a.assignedTo);
+                const msg = TPL_ASSET_SERVICE(a, diff, dStr, 'upcoming');
+                await sendToLevel('user', msg, a.Department, a.assignedTo);
                 sentReminder = true;
-            } else if (diff > 0 && diff < 4) {
+            } else if (diff > 0 && diff < 4) { // Overdue Day 1 to 3
                 currentEscalation = Math.max(currentEscalation, 1);
-                await sendToLevel('l2', TPL_ASSET_SERVICE(a, diff, dStr), a.Department);
+                await sendToLevel('l2', TPL_ASSET_SERVICE(a, diff, dStr, 'overdue'), a.Department);
                 sentReminder = true;
-            } else if (diff >= 4) {
+            } else if (diff >= 4) { // Overdue Day 4+
                 currentEscalation = 2;
-                await sendToLevel('l1', TPL_ASSET_SERVICE(a, diff, dStr), a.Department);
+                await sendToLevel('l1', TPL_ASSET_SERVICE(a, diff, dStr, 'overdue'), a.Department);
                 sentReminder = true;
             }
         }
@@ -381,27 +415,35 @@ async function processAssets(todayStr) {
         const wDiff = warrDate ? getDaysDiff(warrDate) : null;
         const aDiff = amcDate ? getDaysDiff(amcDate) : null;
 
-        const isWarrExpiring = wDiff === -7 || wDiff === -3 || wDiff === 0;
-        const isAmcExpiring = aDiff === -7 || aDiff === -3 || aDiff === 0;
+        const hasAmc = amcDate && aDiff < 0; // True if AMC date exists and is in the future
 
-        if (isWarrExpiring || isAmcExpiring) {
-            const text = `🛡️ *RENEWAL REMINDER*\n\nAsset ID: ${a.AssetID}\nWarranty/AMC is nearing expiration or expires today. Please process renewal.\n\n*SBH Group of Hospitals*`;
-            await sendToLevel('user', text, a.Department, a.assignedTo);
-            sentReminder = true;
-        }
+        const isWarrExpiringSoon = wDiff === -7 || wDiff === -3 || wDiff === 0;
+        const isAmcExpiringSoon = aDiff === -7 || aDiff === -3 || aDiff === 0;
+        const isWarrExpired = wDiff > 0;
+        const isAmcExpired = aDiff > 0;
 
-        // BOTH EXPIRED
-        if (wDiff > 0 && aDiff > 0) {
-            currentEscalation = 2;
-            await sendToLevel('l2', TPL_ASSET_CRITICAL(a), a.Department);
-            await sendToLevel('l1', TPL_ASSET_CRITICAL(a), a.Department);
-            sentReminder = true;
-        } else {
-            // SINGLE EXPIRED -> L2
-            if (wDiff > 0 || aDiff > 0) {
+        // RULE 1: If AMC is active or expiring, DO NOT send warranty reminders
+        if (amcDate) {
+            if (isAmcExpiringSoon) {
+                const msg = TPL_ASSET_AMC(a, aDiff, formatToDDMMYYYY(amcDate));
+                await sendToLevel('user', msg, a.Department, a.assignedTo);
+                sentReminder = true;
+            } else if (isAmcExpired) {
                 currentEscalation = Math.max(currentEscalation, 1);
-                const text = `⚠️ *WARRANTY/AMC EXPIRED*\n\nAsset ID: ${a.AssetID}\nOne or more protections have expired. Action needed.\n\n*SBH Group of Hospitals*`;
-                await sendToLevel('l2', text, a.Department);
+                const msg = TPL_ASSET_AMC(a, aDiff, formatToDDMMYYYY(amcDate));
+                await sendToLevel('l2', msg, a.Department);
+                sentReminder = true;
+            }
+        } else {
+            // RULE 2: No AMC exists, manage via Warranty
+            if (isWarrExpiringSoon) {
+                const msg = TPL_ASSET_WARRANTY(a, wDiff, formatToDDMMYYYY(warrDate), false);
+                await sendToLevel('user', msg, a.Department, a.assignedTo);
+                sentReminder = true;
+            } else if (isWarrExpired) {
+                currentEscalation = Math.max(currentEscalation, 1);
+                const msg = TPL_ASSET_WARRANTY(a, wDiff, formatToDDMMYYYY(warrDate), false);
+                await sendToLevel('l2', msg, a.Department);
                 sentReminder = true;
             }
         }
