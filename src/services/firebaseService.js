@@ -348,24 +348,48 @@ export const firebaseService = { // Primary Service Object
             try {
                 const ticketSnap = await getDoc(complaintRef);
                 const ticketData = ticketSnap.data();
-                const reporter = await getUserMobile(ticketData.ReportedBy);
 
-                if (reporter && reporter.mobile) {
-                    const footer = getFooter();
-                    let message = '';
-                    if (isSolved) {
-                        message = `✅ *TICKET RESOLVED* 🏥\n\nYour complaint has been successfully addressed.\n\n🆔 *Ticket ID:* ${id}\n👤 *Resolved By:* ${resolvedBy || 'Official Staff'}\n💬 *Resolution:* ${remark || 'Resolved successfully'}\n\nThank you for your patience.${footer}`;
-                    } else if (status === 'Extend' || status === 'Extended') {
-                        message = `📅 *TIMELINE EXTENDED* 🏥\n\nCompletion target for your ticket has been updated.\n\n🎫 *Ticket ID:* ${id}\n👤 *Authorized By:* ${resolvedBy || 'System'}\n⏰ *New Target:* ${targetDate || 'N/A'}\n📝 *Reason:* ${remark || 'Operational Requirement'}${footer}`;
-                    } else if (status === 'Open' || status === 'Re-open' || statusLower === 'pending') {
-                        message = `⚠️ *TICKET UPDATE* 🏥\n\nTicket #${id} status has been updated to *${status}*.\n\n🎫 *Ticket ID:* ${id}\n👤 *Action By:* ${resolvedBy || 'System'}\n💬 *Remarks:* ${remark || 'In progress'}${footer}`;
+                if (status === 'Force Close') {
+                    const footer = "\n\nSBH CMS - AI Automated Alert";
+                    const msg = `🚨 *TICKET FORCE CLOSED* 🏥\n\nSystem Administrator (AM Sir) has manually force-closed the following ticket.\n\n🎫 *Ticket ID:* ${id}\n📍 *Department:* ${ticketData.Department || 'N/A'}\n🗣 *Reported By:* ${ticketData.ReportedBy || 'N/A'}\n❌ *Admin Remark:* ${remark || 'Force Closed by AM Sir'}\n\nThis case is now permanently closed.${footer}`;
+
+                    // Send to the person who reported it
+                    if (ticketData.Mobile && String(ticketData.Mobile).trim() !== '' && String(ticketData.Mobile).toLowerCase() !== 'n/a') {
+                        await exports.default.sendWhatsApp(ticketData.Mobile, ticketData.ReportedBy, msg);
+                    } else {
+                        const reporter = await getUserMobile(ticketData.ReportedBy);
+                        if (reporter && reporter.mobile) sendWhatsApp(reporter.mobile, reporter.name, msg);
                     }
 
-                    if (message) {
-                        sendWhatsApp(reporter.mobile, reporter.name, message);
+                    // Also notify the department HDs that it was force closed
+                    const deptMobiles = await exports.default.getDepartmentMobiles(ticketData.Department);
+                    for (const contact of deptMobiles) {
+                        if (contact.mobile) {
+                            await exports.default.sendWhatsApp(contact.mobile, contact.name, msg);
+                        }
+                    }
+                } else {
+                    const reporter = await getUserMobile(ticketData.ReportedBy);
+
+                    if (reporter && reporter.mobile) {
+                        const footer = getFooter();
+                        let message = '';
+                        if (isSolved) {
+                            message = `✅ *TICKET RESOLVED* 🏥\n\nYour complaint has been successfully addressed.\n\n🆔 *Ticket ID:* ${id}\n👤 *Resolved By:* ${resolvedBy || 'Official Staff'}\n💬 *Resolution:* ${remark || 'Resolved successfully'}\n\nThank you for your patience.${footer}`;
+                        } else if (status === 'Extend' || status === 'Extended') {
+                            message = `📅 *TIMELINE EXTENDED* 🏥\n\nCompletion target for your ticket has been updated.\n\n🎫 *Ticket ID:* ${id}\n👤 *Authorized By:* ${resolvedBy || 'System'}\n⏰ *New Target:* ${targetDate || 'N/A'}\n📝 *Reason:* ${remark || 'Operational Requirement'}${footer}`;
+                        } else if (status === 'Open' || status === 'Re-open' || statusLower === 'pending') {
+                            message = `⚠️ *TICKET UPDATE* 🏥\n\nTicket #${id} status has been updated to *${status}*.\n\n🎫 *Ticket ID:* ${id}\n👤 *Action By:* ${resolvedBy || 'System'}\n💬 *Remarks:* ${remark || 'In progress'}${footer}`;
+                        }
+
+                        if (message) {
+                            sendWhatsApp(reporter.mobile, reporter.name, message);
+                        }
                     }
                 }
-            } catch (e) { }
+            } catch (e) {
+                console.warn("Failed sending update notification", e);
+            }
 
             return { status: 'success' };
         } catch (error) {
@@ -572,53 +596,6 @@ export const firebaseService = { // Primary Service Object
         }
     },
 
-    updateComplaintStatus: async (id, status, resolvedBy, remark = "") => {
-        try {
-            const complaintRef = doc(db, "complaints", id);
-            const now = new Date().toISOString();
-
-            await updateDoc(complaintRef, {
-                Status: status,
-                ResolvedBy: resolvedBy || "",
-                ResolvedDate: now,
-                LastUpdated: now,
-                Remark: remark || ""
-            });
-
-            // 🟢 NEW: Automated WhatsApp Alert for Force Close
-            if (status === 'Force Close') {
-                try {
-                    const snap = await getDoc(complaintRef);
-                    if (snap.exists()) {
-                        const ticketData = snap.data();
-                        const footer = "\n\nSBH CMS - AI Automated Alert";
-
-                        const msg = `🚨 *TICKET FORCE CLOSED* 🏥\n\nSystem Administrator (AM Sir) has manually force-closed the following ticket.\n\n🎫 *Ticket ID:* ${id}\n📍 *Department:* ${ticketData.Department || 'N/A'}\n🗣 *Reported By:* ${ticketData.ReportedBy || 'N/A'}\n❌ *Admin Remark:* ${remark || 'Force Closed by AM Sir'}\n\nThis case is now permanently closed.${footer}`;
-
-                        // Send to the person who reported it
-                        if (ticketData.Mobile && String(ticketData.Mobile).trim() !== '' && String(ticketData.Mobile).toLowerCase() !== 'n/a') {
-                            await exports.default.sendWhatsApp(ticketData.Mobile, ticketData.ReportedBy, msg);
-                        }
-
-                        // Also notify the department HDs that it was force closed
-                        const deptMobiles = await exports.default.getDepartmentMobiles(ticketData.Department);
-                        for (const contact of deptMobiles) {
-                            if (contact.mobile) {
-                                await exports.default.sendWhatsApp(contact.mobile, contact.name, msg);
-                            }
-                        }
-                    }
-                } catch (notifyErr) {
-                    console.error("Failed to send Force Close WhatsApp alert:", notifyErr);
-                }
-            }
-
-            return { status: 'success' };
-        } catch (error) {
-            console.error("Firestore updateComplaintStatus Error:", error);
-            throw error;
-        }
-    },
 
     extendComplaint: async (id, date, reason, username, oldDate) => {
         try {
