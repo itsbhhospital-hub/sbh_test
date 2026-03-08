@@ -83,40 +83,48 @@ const formatDiffDays = (diffDays) => {
     return parts.length > 0 ? parts.join(', ') : "0 days";
 };
 
-const getUniqueRecipients = (asset) => {
+// Returns an array of recipient objects based on required escalation level
+const getEscalatedRecipients = (asset, level) => {
     const recipients = new Map(); 
+
+    // Level 0: Only Responsible Person
     if (asset.responsibleMobile) recipients.set(asset.responsibleMobile, asset.responsiblePerson || "Responsible");
-    if (asset.reminder1Mobile) recipients.set(asset.reminder1Mobile, "Reminder 1");
-    if (asset.l1Mobile) recipients.set(asset.l1Mobile, "L1 Esc");
-    else recipients.set("9644404741", "Director"); 
-    if (asset.l2Mobile) recipients.set(asset.l2Mobile, "L2 Esc");
-    else recipients.set("9644404741", "Management"); 
+    
+    // Level 1: Responsible + Reminder 1 + L2
+    if (level >= 1) {
+        if (asset.reminder1Mobile) recipients.set(asset.reminder1Mobile, "Reminder 1");
+        if (asset.l2Mobile) recipients.set(asset.l2Mobile, "L2 Esc");
+        else recipients.set("9644404741", "Management"); // Fallback L2
+    }
+    
+    // Level 2: Responsible + Reminder 1 + L2 + L1(Director)
+    if (level >= 2) {
+        if (asset.l1Mobile) recipients.set(asset.l1Mobile, "L1 Esc");
+        else recipients.set("9644404741", "Director"); // Fallback L1
+    }
+
     return Array.from(recipients, ([phone, name]) => ({ phone, name }));
 };
 
 const processAssetReminders = async (todayStr) => {
-    console.log("🔍 Checking Asset Maintenance...");
+    console.log("🔍 Checking Asset Maintenance (v3 Escalation)...");
     const snapshot = await db.collection("assets").get();
     const today = new Date();
-    // Normalize today to start of day for accurate comparison
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const footer = getFooter();
     
-    const serviceWarningThreshold = 2; // User didn't request change here, so 2 days for service
-    const supportWarningThreshold = 15; // 15 days for AMC/Warranty
+    const serviceWarningThreshold = 2; // Fixed threshold for service
 
     for (const doc of snapshot.docs) {
         const asset = doc.data();
-        const recipients = getUniqueRecipients(asset);
-
-        // --- STAGNATION REMINDER (Only for Non-Active Assets like Breakdown) ---
+        
+        // --- STAGNATION REMINDER ---
         if (asset.status !== 'Active') {
             let updateDate = null;
             if (asset.updatedAt && typeof asset.updatedAt.toDate === 'function') updateDate = asset.updatedAt.toDate();
             else if (asset.updatedAt) updateDate = new Date(asset.updatedAt);
             else updateDate = new Date(); // fallback
             
-            // Normalize dates to start of day
             updateDate = new Date(updateDate.getFullYear(), updateDate.getMonth(), updateDate.getDate());
             const stagnationDays = Math.floor((todayStart.getTime() - updateDate.getTime()) / (1000 * 60 * 60 * 24));
             const stagnationKey = `Stagnation_${todayStr}`;
@@ -124,38 +132,45 @@ const processAssetReminders = async (todayStr) => {
             if (stagnationDays >= 4 && asset.LastStagnationNotifiedDate !== stagnationKey) {
                 const msg = `*⚠️ ASSET STAGNATION ALERT* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n⏳ *No updates logged for ${formatDiffDays(stagnationDays)}.*\n⚡ *Immediate review required.*${footer}`;
                 
-                for (const rec of recipients) {
+                // L2 Escalation (Level 2) logic for Stagnation
+                const recs = getEscalatedRecipients(asset, 2); 
+                for (const rec of recs) {
                     await sendWhatsApp(rec.phone, rec.name, msg);
                 }
-                await doc.ref.update({
-                    LastStagnationNotifiedDate: stagnationKey
-                    // Purposely NOT updating updatedAt so it continues to trigger daily via the count
-                });
+                await doc.ref.update({ LastStagnationNotifiedDate: stagnationKey });
             }
-            
-            // Skip service/support checks for non-active assets
             continue; 
         }
 
-        // --- 1. SERVICE REMINDERS ---
+        // Determine Last Service Date 
+        // fallback to install date if no service performed explicitly
+        const lastServiceDateFormatted = formatIndianDate(
+            asset.lastServiceDate ? asset.lastServiceDate : asset.currentServiceDate
+        );
+
+        // --- 1. SERVICE REMINDERS (Uses Level 2 for Overdue, Level 0 for Warning) ---
         if (asset.nextServiceDate) {
             const nextService = new Date(asset.nextServiceDate);
             const diffTime = nextService.getTime() - todayStart.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const sDiffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
             const serviceLoggedKey = `AssetService_${todayStr}`;
 
             if (asset.LastAssetNotifiedDate !== serviceLoggedKey) {
                 let message = "";
+                let escLevel = 0;
                 
-                if (diffDays <= 0) {
-                    message = `*⚠️ ASSET SERVICE OVERDUE* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n🚨 *Service was due on:* ${formatIndianDate(asset.nextServiceDate)}\n⏳ *Overdue By:* ${formatDiffDays(diffDays)}\n\n⚡ *Action Required:* Please schedule maintenance immediately.${footer}`;
-                } else if (diffDays <= serviceWarningThreshold) {
-                    message = `*🔧 UPCOMING ASSET SERVICE* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n📅 *Due In:* ${formatDiffDays(diffDays)} (${formatIndianDate(asset.nextServiceDate)})\n🔧 _Please prepare for maintenance activity._${footer}`;
+                if (sDiffDays <= 0) {
+                    escLevel = 2; // Overdue service alerts go to everyone (L1, L2, Resp)
+                    message = `*⚠️ ASSET SERVICE OVERDUE* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n🚨 *Service was due on:* ${formatIndianDate(asset.nextServiceDate)}\n⏳ *Overdue By:* ${formatDiffDays(sDiffDays)}\n\n⚡ *Action Required:* Please schedule maintenance immediately.${footer}`;
+                } else if (sDiffDays <= serviceWarningThreshold) {
+                    escLevel = 0; // Pre-warning only goes to responsible person
+                    message = `*🔧 UPCOMING ASSET SERVICE* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n📅 *Due In:* ${formatDiffDays(sDiffDays)} (${formatIndianDate(asset.nextServiceDate)})\n🔧 _Please prepare for maintenance activity._${footer}`;
                 }
 
                 if (message) {
-                    for (const rec of recipients) {
+                    const recs = getEscalatedRecipients(asset, escLevel);
+                    for (const rec of recs) {
                         await sendWhatsApp(rec.phone, rec.name, message);
                     }
                     await doc.ref.update({ LastAssetNotifiedDate: serviceLoggedKey });
@@ -163,49 +178,79 @@ const processAssetReminders = async (todayStr) => {
             }
         }
 
-        // --- 2. AMC & WARRANTY LOGIC INTERPLAY ---
+        // --- 2. AMC & WARRANTY LOGIC INTERPLAY (V3) ---
         let hasWarranty = false;
         let hasAmc = false;
         let wDiffDays = null;
         let aDiffDays = null;
 
-        // Calculate Warranty
         if (asset.warrantyType && asset.warrantyType !== 'None' && asset.warrantyExpiry) {
             const wDate = new Date(asset.warrantyExpiry);
             wDiffDays = Math.ceil((wDate.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
             if (wDiffDays > 0) hasWarranty = true;
         }
 
-        // Calculate AMC
         if (asset.amcTaken === 'Yes' && asset.amcExpiry) {
             const aDate = new Date(asset.amcExpiry);
             aDiffDays = Math.ceil((aDate.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
             if (aDiffDays > 0) hasAmc = true;
         }
 
+        const amcStatusText = (asset.amcTaken === 'Yes' && hasAmc) ? 'Active' : 'Not Active';
+
         const supportKey = `Support_${todayStr}`;
         if (asset.LastSupportNotifiedDate !== supportKey) {
             let supportMsg = "";
+            let escLevel = 0;
 
-            // If Warranty is NOT active, we check AMC
+            // Determine if we should process AMC or Warranty
+            let activeDiffDays = null;
+            let contractType = '';
+            let expireDateStr = '';
+
+            // Rule: Warranty Trumps AMC if active. If both expired, process latest.
             if (aDiffDays !== null && !hasWarranty) {
-                if (aDiffDays <= 0) {
-                    supportMsg = `*🛑 AMC EXPIRED* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n🏢 *Vendor:* ${asset.vendorName || 'N/A'}\n\n🚨 *Expired On:* ${formatIndianDate(asset.amcExpiry)}\n⏳ *Overdue By:* ${formatDiffDays(aDiffDays)}\n\n⚡ *Action Required:* Please renew AMC immediately.${footer}`;
-                } else if (aDiffDays <= supportWarningThreshold) {
-                    supportMsg = `*📑 UPCOMING AMC EXPIRY* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n🏢 *Vendor:* ${asset.vendorName || 'N/A'}\n\n📅 *Expires In:* ${formatDiffDays(aDiffDays)} (${formatIndianDate(asset.amcExpiry)})\n🔧 _Please initiate AMC renewal._${footer}`;
+                activeDiffDays = aDiffDays;
+                contractType = 'AMC';
+                expireDateStr = asset.amcExpiry;
+            } else if (wDiffDays !== null && !hasAmc) {
+                activeDiffDays = wDiffDays;
+                contractType = 'WARRANTY';
+                expireDateStr = asset.warrantyExpiry;
+            }
+
+            if (activeDiffDays !== null) {
+                // V3 Escalation Timeline
+                if (activeDiffDays < 0) {
+                    // EXPIRED (Level 0 - Only Responsible Person)
+                    escLevel = 0;
+                    supportMsg = `*🛑 ${contractType} EXPIRED ALERT* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n🚨 *Expired On:* ${formatIndianDate(expireDateStr)}\n⏳ *Expired Since:* ${formatDiffDays(activeDiffDays)}\n\n📊 *Current Status:*\n- *AMC:* ${amcStatusText}\n- *Last Service Log:* ${lastServiceDateFormatted}\n\n⚡ *Action Required:* ${contractType} has lapsed. Please update the system immediately.${footer}`;
+                } 
+                else if (activeDiffDays === 0) {
+                    // EXPIRES TODAY (Level 2 - Director + L2 + Resp)
+                    escLevel = 2;
+                    supportMsg = `*⚠️ ${contractType} EXPIRES TODAY* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n🚨 *Final Day of Coverage*\n\n📊 *Current Status:*\n- *AMC:* ${amcStatusText}\n\n⚡ *Action Required:* Immediate renewal necessary.${footer}`;
                 }
-            } 
-            // If AMC is NOT active, we check Warranty
-            else if (wDiffDays !== null && !hasAmc) {
-                if (wDiffDays <= 0) {
-                    supportMsg = `*🛑 WARRANTY EXPIRED* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n🚨 *Expired On:* ${formatIndianDate(asset.warrantyExpiry)}\n⏳ *Overdue By:* ${formatDiffDays(wDiffDays)}\n\n⚡ *Action Required:* Please renew warranty or purchase AMC immediately.${footer}`;
-                } else if (wDiffDays <= supportWarningThreshold) {
-                    supportMsg = `*📑 UPCOMING WARRANTY EXPIRY* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n📅 *Expires In:* ${formatDiffDays(wDiffDays)} (${formatIndianDate(asset.warrantyExpiry)})\n🔧 _Please initiate Warranty renewal._${footer}`;
+                else if (activeDiffDays <= 4) {
+                    // 4 to 1 Days Remaining (Level 2 - Director + L2 + Resp)
+                    escLevel = 2;
+                    supportMsg = `*⚠️ ${contractType} URGENT EXPIRY* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n📅 *Expires In:* ${formatDiffDays(activeDiffDays)} (${formatIndianDate(expireDateStr)})\n\n⚡ *Action Required:* Urgent renewal tracking required.${footer}`;
+                }
+                else if (activeDiffDays <= 8) {
+                    // 8 to 5 Days Remaining (Level 1 - L2 + Resp)
+                    escLevel = 1;
+                    supportMsg = `*📑 ${contractType} EXPIRING SOON* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n📅 *Expires In:* ${formatDiffDays(activeDiffDays)} (${formatIndianDate(expireDateStr)})\n\n🔧 _Please initiate renewal processing._${footer}`;
+                }
+                else if (activeDiffDays <= 15) {
+                    // 15 to 9 Days Remaining (Level 0 - Only Resp)
+                    escLevel = 0;
+                    supportMsg = `*ℹ️ ${contractType} RENEWAL NOTICE* 🏥\n\n🆔 *Asset ID:* ${asset.AssetID}\n⚙️ *Machine:* ${asset.machineName}\n🏢 *Department:* ${asset.department || 'N/A'}\n📍 *Location:* ${asset.location}\n\n📅 *Expires In:* ${formatDiffDays(activeDiffDays)} (${formatIndianDate(expireDateStr)})\n\n🔧 _Please begin preparing for renewal._${footer}`;
                 }
             }
 
             if (supportMsg) {
-                for (const rec of recipients) {
+                const recs = getEscalatedRecipients(asset, escLevel);
+                for (const rec of recs) {
                     await sendWhatsApp(rec.phone, rec.name, supportMsg);
                 }
                 await doc.ref.update({ LastSupportNotifiedDate: supportKey });
@@ -299,7 +344,6 @@ const processComplaintReminders = async (todayStr) => {
             await doc.ref.update({
                 LastDelayNotifiedDate: todayStr,
                 ReminderCount: admin.firestore.FieldValue.increment(1)
-                // Explicitly omitted updatedAt so Stagnation Alert could still trigger on complaints in future (if added)
             });
         }
     }
