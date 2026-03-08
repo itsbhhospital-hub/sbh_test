@@ -312,15 +312,18 @@ const processComplaintReminders = async (todayStr) => {
         let message = "";
         let alertType = "";
 
+        const rawDueDate = data.DueDate || data.TargetDate;
+        const dueDateFormatted = rawDueDate ? formatIndianDate(rawDueDate) : 'N/A';
+
         if (daysOverdue === 1) {
             alertType = "DELAY_ALERT";
-            message = `🚨 *URGENT: DELAY ALERT* 🏥\n\nThe following case is pending and requires immediate attention.\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n📅 *Registered:* ${formatIndianDate(data.Date)}\n⏳ *Overdue By:* ${formatDiffDays(daysOverdue)}\n\nKindly address this case now.${footer}`;
+            message = `🚨 *URGENT: DELAY ALERT* 🏥\n\nThe following case is pending and requires immediate attention.\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n📅 *Registered:* ${formatIndianDate(data.Date)}\n📅 *Due Date:* ${dueDateFormatted}\n⏳ *Overdue By:* ${formatDiffDays(daysOverdue)}\n\nKindly address this case now.${footer}`;
         } else if (daysOverdue === 2) {
             alertType = "L2_ESCALATION";
-            message = `🚩 *LEVEL 2 ESCALATION* 🏥\n\nManagement Attention Required,\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n📅 *Registered:* ${formatIndianDate(data.Date)}\n⏳ *Pending Since:* ${formatDiffDays(daysOverdue)}\n\nKindly intervene for immediate resolution.${footer}`;
+            message = `🚩 *LEVEL 2 ESCALATION* 🏥\n\nManagement Attention Required,\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n📅 *Registered:* ${formatIndianDate(data.Date)}\n📅 *Due Date:* ${dueDateFormatted}\n⏳ *Pending Since:* ${formatDiffDays(daysOverdue)}\n\nKindly intervene for immediate resolution.${footer}`;
         } else if (daysOverdue >= 3) {
             alertType = "L1_DIRECTOR_ESCALATION";
-            message = `🚨 *DIRECTORATE LEVEL ESCALATION* 🏥\n\nRespected Sir,\nThis ticket has reached critical delay status.\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n📅 *Registered:* ${formatIndianDate(data.Date)}\n⏳ *Overdue By:* ${formatDiffDays(daysOverdue)}\n\nRequested for your direct intervention.${footer}`;
+            message = `🚨 *DIRECTORATE LEVEL ESCALATION* 🏥\n\nRespected Sir,\nThis ticket has reached critical delay status.\n\n🎫 *Ticket ID:* ${ticketId}\n📍 *Department:* ${dept}\n📅 *Registered:* ${formatIndianDate(data.Date)}\n📅 *Due Date:* ${dueDateFormatted}\n⏳ *Overdue By:* ${formatDiffDays(daysOverdue)}\n\nRequested for your direct intervention.${footer}`;
         }
 
         if (message) {
