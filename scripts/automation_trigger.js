@@ -78,12 +78,17 @@ async function sendWhatsApp(phone, name, message) {
 }
 
 // --- TEMPLATES ---
-const TPL_COMPLAINT_DELAY = (c, delayDays) => `🚨 *DELAY ALERT*
+const TPL_COMPLAINT_DELAY = (c, delayDays) => {
+    const rawDueDate = c.DueDate || c.TargetDate;
+    const parsedDue = parseDateSafe(rawDueDate);
+    const dueDateStr = parsedDue ? formatToDDMMYYYY(parsedDue) : 'N/A';
+
+    return `🚨 *DELAY ALERT*
 
 🔹 Case ID: ${c.ID}
 🏢 Department: ${c.Department}
 👤 Assigned To: ${c.AssignedTo || c.Department + ' Team'}
-📅 Due Date: ${c.DueDate || c.TargetDate || 'N/A'}
+📅 Due Date: ${dueDateStr}
 ⏳ Delay: ${delayDays} Days
 
 Kindly update immediately to avoid escalation.
@@ -91,6 +96,7 @@ Kindly update immediately to avoid escalation.
 —
 *SBH Group of Hospitals*
 *Automated Compliance System*`;
+};
 
 const TPL_L2_ESCALATION = (c, delayDays, lastActivity) => `⚠️ *LEVEL 2 ESCALATION*
 
