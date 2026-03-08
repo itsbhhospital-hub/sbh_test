@@ -171,7 +171,10 @@ const AssetDetails = () => {
             keywords: asset.keywords || '',
             description: asset.description || '',
             responsiblePerson: asset.responsiblePerson || '',
-            responsibleMobile: asset.responsibleMobile || ''
+            responsibleMobile: asset.responsibleMobile || '',
+            reminder1Mobile: asset.reminder1Mobile || '',
+            l1Mobile: asset.l1Mobile || '',
+            l2Mobile: asset.l2Mobile || ''
         });
         setShowEditModal(true);
     };
@@ -1306,7 +1309,7 @@ const AssetDetails = () => {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-xs font-black text-indigo-800 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded w-fit mb-1 block">Responsible Person</label>
+                                        <label className="text-xs font-black text-indigo-800 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded w-fit mb-1 block">Responsible Person Name</label>
                                         <input type="text" className="w-full bg-indigo-50/50 border border-indigo-100 rounded-xl px-3 py-2 font-bold"
                                             value={editForm.responsiblePerson || ''} onChange={e => setEditForm({ ...editForm, responsiblePerson: e.target.value })} />
                                     </div>
@@ -1314,6 +1317,23 @@ const AssetDetails = () => {
                                         <label className="text-xs font-black text-indigo-800 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded w-fit mb-1 block">Responsible Mobile</label>
                                         <input type="text" className="w-full bg-indigo-50/50 border border-indigo-100 rounded-xl px-3 py-2 font-bold"
                                             value={editForm.responsibleMobile || ''} onChange={e => setEditForm({ ...editForm, responsibleMobile: e.target.value })} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="text-xs font-black text-rose-800 uppercase tracking-widest bg-rose-50 px-2 py-1 rounded w-fit mb-1 block">Reminder 1 Mobile</label>
+                                        <input type="text" placeholder="(Optional)" className="w-full bg-rose-50/50 border border-rose-100 rounded-xl px-3 py-2 font-bold"
+                                            value={editForm.reminder1Mobile || ''} onChange={e => setEditForm({ ...editForm, reminder1Mobile: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-black text-rose-800 uppercase tracking-widest bg-rose-50 px-2 py-1 rounded w-fit mb-1 block">L1 Mobile</label>
+                                        <input type="text" placeholder="(Optional)" className="w-full bg-rose-50/50 border border-rose-100 rounded-xl px-3 py-2 font-bold"
+                                            value={editForm.l1Mobile || ''} onChange={e => setEditForm({ ...editForm, l1Mobile: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-black text-rose-800 uppercase tracking-widest bg-rose-50 px-2 py-1 rounded w-fit mb-1 block">L2 Mobile</label>
+                                        <input type="text" placeholder="(Optional)" className="w-full bg-rose-50/50 border border-rose-100 rounded-xl px-3 py-2 font-bold"
+                                            value={editForm.l2Mobile || ''} onChange={e => setEditForm({ ...editForm, l2Mobile: e.target.value })} />
                                     </div>
                                 </div>
 

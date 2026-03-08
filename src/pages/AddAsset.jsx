@@ -35,7 +35,10 @@ const AddAsset = () => {
         vendorMobile: '', // Fixed missing initial state
         purchaseCost: '',
         responsiblePerson: '', // New
-        responsibleMobile: ''  // New
+        responsibleMobile: '',  // New
+        reminder1Mobile: '', // New
+        l1Mobile: '', // New
+        l2Mobile: '' // New
     });
 
     // Auto-calculate Warranty Expiry
@@ -273,7 +276,7 @@ const AddAsset = () => {
                             {/* RESPONSIBLE PERSON FIELDS */}
                             <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6 mt-2 pt-4 border-t border-blue-100">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-indigo-700 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md w-fit mb-0.5">Responsible Person</label>
+                                    <label className="text-[10px] font-black text-indigo-700 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md w-fit mb-0.5">Responsible Person Name</label>
                                     <input
                                         type="text"
                                         required
@@ -284,7 +287,7 @@ const AddAsset = () => {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-indigo-700 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md w-fit mb-0.5">Mobile (WhatsApp)</label>
+                                    <label className="text-[10px] font-black text-indigo-700 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md w-fit mb-0.5">Responsible Mobile</label>
                                     <input
                                         type="text"
                                         required
@@ -292,6 +295,36 @@ const AddAsset = () => {
                                         placeholder="e.g. 8989828902"
                                         value={formData.responsibleMobile}
                                         onChange={e => setFormData({ ...formData, responsibleMobile: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-rose-700 uppercase tracking-widest bg-rose-50 px-2 py-1 rounded-md w-fit mb-0.5">Reminder 1 Mobile (Optional)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-white border border-rose-100 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-rose-500 transition-all shadow-sm"
+                                        placeholder="Mobile Number"
+                                        value={formData.reminder1Mobile}
+                                        onChange={e => setFormData({ ...formData, reminder1Mobile: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-rose-700 uppercase tracking-widest bg-rose-50 px-2 py-1 rounded-md w-fit mb-0.5">L1 Esc Mobile (Optional)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-white border border-rose-100 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-rose-500 transition-all shadow-sm"
+                                        placeholder="Mobile Number"
+                                        value={formData.l1Mobile}
+                                        onChange={e => setFormData({ ...formData, l1Mobile: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-rose-700 uppercase tracking-widest bg-rose-50 px-2 py-1 rounded-md w-fit mb-0.5">L2 Esc Mobile (Optional)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-white border border-rose-100 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-rose-500 transition-all shadow-sm"
+                                        placeholder="Mobile Number"
+                                        value={formData.l2Mobile}
+                                        onChange={e => setFormData({ ...formData, l2Mobile: e.target.value })}
                                     />
                                 </div>
                             </div>
